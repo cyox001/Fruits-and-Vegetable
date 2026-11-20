@@ -1,0 +1,3096 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Garden Harvest — Fruit & Vegetable Vocabulary Game</title>
+  <!-- Google Fonts: Fredoka for playful, beginner-friendly rounded letterforms -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <style>
+    :root {
+      --sky-top: #E6F7FF;
+      --sky-bottom: #FFFDF5;
+      --grass-light: #B8E986;
+      --grass-mid: #8CD458;
+      --grass-dark: #6AB83A;
+      --wood-light: #E8B87D;
+      --wood-mid: #C68B49;
+      --wood-dark: #8C5828;
+      --cream: #FFFDF7;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Fredoka', sans-serif;
+      background: linear-gradient(135deg, #2d4c2b 0%, #1d351c 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    /* Responsive 16:9 Stage Container */
+    #stage-wrapper {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: min(1.5vw, 14px);
+    }
+
+    #game-stage {
+      position: relative;
+      width: 100%;
+      max-width: 177.78vh; /* Maintain 16:9 within viewport height */
+      aspect-ratio: 16 / 9;
+      max-height: 100%;
+      background: linear-gradient(180deg, #DCF4FF 0%, #F4FBE8 56%, #B4E57A 56.5%, #93D253 100%);
+      border-radius: 28px;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.38), inset 0 0 0 5px rgba(255, 255, 255, 0.65);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Fullscreen adjustment */
+    #game-stage:fullscreen,
+    #game-stage:-webkit-full-screen {
+      max-width: 100vw;
+      max-height: 100vh;
+      border-radius: 0;
+    }
+
+    /* Gentle Floating Clouds */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateX(0px); }
+      50% { transform: translateX(18px); }
+    }
+    .cloud-float-1 { animation: floatSlow 11s ease-in-out infinite; }
+    .cloud-float-2 { animation: floatSlow 15s ease-in-out infinite reverse; }
+
+    /* Card Pop-in Animation */
+    @keyframes popIn {
+      0% { transform: scale(0.5) translateY(20px); opacity: 0; }
+      70% { transform: scale(1.06) translateY(-4px); opacity: 1; }
+      100% { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .animate-pop-in {
+      animation: popIn 0.42s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    /* Gentle Idle Bob for Active Item */
+    @keyframes gentleBob {
+      0%, 100% { transform: translateY(0px) rotate(0deg); }
+      50% { transform: translateY(-6px) rotate(1.5deg); }
+    }
+    .idle-bob {
+      animation: gentleBob 3s ease-in-out infinite;
+    }
+
+    /* Container Happy Bounce on Catch */
+    @keyframes basketSquish {
+      0% { transform: scale(1, 1); }
+      30% { transform: scale(1.13, 0.88); }
+      60% { transform: scale(0.95, 1.06); }
+      100% { transform: scale(1, 1); }
+    }
+    .animate-catch {
+      animation: basketSquish 0.48s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* Drop zone highlight pulse */
+    .drop-zone-active {
+      transform: scale(1.06);
+      filter: drop-shadow(0 0 22px rgba(255, 224, 92, 0.95));
+    }
+
+    /* Draggable Item Styling */
+    #draggable-card {
+      touch-action: none;
+      cursor: grab;
+      transition: box-shadow 0.2s ease, transform 0.15s ease;
+      z-index: 30;
+    }
+    #draggable-card:active,
+    #draggable-card.is-dragging {
+      cursor: grabbing;
+      z-index: 60;
+    }
+
+    /* Sparkle / Leaf Particle Animation */
+    @keyframes particleBurst {
+      0% {
+        transform: translate(0, 0) scale(0.4) rotate(0deg);
+        opacity: 1;
+      }
+      100% {
+        transform: translate(var(--tx), var(--ty)) scale(1.15) rotate(var(--rot));
+        opacity: 0;
+      }
+    }
+    .particle {
+      position: absolute;
+      pointer-events: none;
+      z-index: 70;
+      animation: particleBurst 0.85s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    /* Custom Scrollbar for Settings Drawer */
+    .garden-scroll::-webkit-scrollbar {
+      width: 8px;
+    }
+    .garden-scroll::-webkit-scrollbar-track {
+      background: #F4EFE2;
+      border-radius: 99px;
+    }
+    .garden-scroll::-webkit-scrollbar-thumb {
+      background: #C9B99A;
+      border-radius: 99px;
+    }
+    .garden-scroll::-webkit-scrollbar-thumb:hover {
+      background: #A99573;
+    }
+
+    /* Tactile 3D Button Style */
+    .btn-tactile {
+      transition: transform 0.12s ease, box-shadow 0.12s ease, background-color 0.15s ease;
+    }
+    .btn-tactile:active {
+      transform: translateY(3px);
+    }
+  </style>
+</head>
+<body>
+  <div id="stage-wrapper">
+    <main id="game-stage" aria-label="Garden Harvest Vocabulary Game">
+      
+      <!-- DECORATIVE GARDEN BACKGROUND LAYER (SVG) -->
+      <svg class="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <defs>
+          <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFF4A3" stop-opacity="0.95" />
+            <stop offset="60%" stop-color="#FFE066" stop-opacity="0.35" />
+            <stop offset="100%" stop-color="#FFE066" stop-opacity="0" />
+          </radialGradient>
+          <linearGradient id="hillBack" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#BCE98A" />
+            <stop offset="100%" stop-color="#9BD664" />
+          </linearGradient>
+          <linearGradient id="hillFront" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#A6DF6E" />
+            <stop offset="100%" stop-color="#7EC343" />
+          </linearGradient>
+        </defs>
+
+        <!-- Warm Sun in upper center-left -->
+        <circle cx="810" cy="145" r="145" fill="url(#sunGlow)" />
+        <circle cx="810" cy="145" r="46" fill="#FFD93D" />
+
+        <!-- Fluffy Clouds -->
+        <g class="cloud-float-1" fill="#FFFFFF" opacity="0.9">
+          <circle cx="240" cy="150" r="36" />
+          <circle cx="280" cy="140" r="46" />
+          <circle cx="325" cy="152" r="34" />
+          <rect x="235" y="152" width="95" height="34" rx="17" />
+        </g>
+
+        <g class="cloud-float-2" fill="#FFFFFF" opacity="0.85">
+          <circle cx="1230" cy="165" r="32" />
+          <circle cx="1268" cy="152" r="44" />
+          <circle cx="1312" cy="165" r="30" />
+          <rect x="1225" y="164" width="92" height="32" rx="16" />
+        </g>
+
+        <!-- Distant Rolling Garden Hills -->
+        <path d="M-50 540 Q 380 410 850 515 T 1650 475 L 1650 900 L -50 900 Z" fill="url(#hillBack)" />
+        <path d="M-50 565 Q 520 485 1040 555 T 1650 520 L 1650 900 L -50 900 Z" fill="url(#hillFront)" />
+
+        <!-- Cozy Garden Picket Fence along Horizon -->
+        <g transform="translate(0, 442)" fill="#FFFDF7" stroke="#DFD5C2" stroke-width="2.5">
+          <!-- Horizontal Rails -->
+          <rect x="0" y="26" width="1600" height="12" rx="4" />
+          <rect x="0" y="64" width="1600" height="12" rx="4" />
+          <!-- Pickets -->
+          <g id="fence-pickets">
+            <path d="M40 95 L40 18 L56 2 L72 18 L72 95 Z" />
+            <path d="M125 95 L125 18 L141 2 L157 18 L157 95 Z" />
+            <path d="M210 95 L210 18 L226 2 L242 18 L242 95 Z" />
+            <path d="M295 95 L295 18 L311 2 L327 18 L327 95 Z" />
+            <path d="M380 95 L380 18 L396 2 L412 18 L412 95 Z" />
+            <path d="M465 95 L465 18 L481 2 L497 18 L497 95 Z" />
+            <path d="M550 95 L550 18 L566 2 L582 18 L582 95 Z" />
+            <path d="M635 95 L635 18 L651 2 L667 18 L667 95 Z" />
+            <path d="M720 95 L720 18 L736 2 L752 18 L752 95 Z" />
+            <path d="M805 95 L805 18 L821 2 L837 18 L837 95 Z" />
+            <path d="M890 95 L890 18 L906 2 L922 18 L922 95 Z" />
+            <path d="M975 95 L975 18 L991 2 L1007 18 L1007 95 Z" />
+            <path d="M1060 95 L1060 18 L1076 2 L1092 18 L1092 95 Z" />
+            <path d="M1145 95 L1145 18 L1161 2 L1177 18 L1177 95 Z" />
+            <path d="M1230 95 L1230 18 L1246 2 L1262 18 L1262 95 Z" />
+            <path d="M1315 95 L1315 18 L1331 2 L1347 18 L1347 95 Z" />
+            <path d="M1400 95 L1400 18 L1416 2 L1432 18 L1432 95 Z" />
+            <path d="M1485 95 L1485 18 L1501 2 L1517 18 L1517 95 Z" />
+          </g>
+        </g>
+
+        <!-- Soft Garden Bushes -->
+        <g fill="#68B638">
+          <circle cx="95" cy="535" r="46" />
+          <circle cx="145" cy="542" r="38" />
+          <circle cx="52" cy="548" r="32" />
+          <circle cx="1505" cy="530" r="50" />
+          <circle cx="1450" cy="540" r="36" />
+          <circle cx="1555" cy="544" r="34" />
+        </g>
+
+        <!-- Sweet Little Garden Wildflowers -->
+        <g transform="translate(160, 770)">
+          <circle cx="0" cy="-10" r="8" fill="#FFF" />
+          <circle cx="10" cy="0" r="8" fill="#FFF" />
+          <circle cx="0" cy="10" r="8" fill="#FFF" />
+          <circle cx="-10" cy="0" r="8" fill="#FFF" />
+          <circle cx="0" cy="0" r="6" fill="#FFD93D" />
+        </g>
+        <g transform="translate(765, 795)">
+          <circle cx="0" cy="-9" r="7" fill="#FF9EBB" />
+          <circle cx="9" cy="0" r="7" fill="#FF9EBB" />
+          <circle cx="0" cy="9" r="7" fill="#FF9EBB" />
+          <circle cx="-9" cy="0" r="7" fill="#FF9EBB" />
+          <circle cx="0" cy="0" r="5.5" fill="#FFF3B0" />
+        </g>
+        <g transform="translate(1435, 785)">
+          <circle cx="0" cy="-9" r="7.5" fill="#FFF" />
+          <circle cx="9" cy="0" r="7.5" fill="#FFF" />
+          <circle cx="0" cy="9" r="7.5" fill="#FFF" />
+          <circle cx="-9" cy="0" r="7.5" fill="#FFF" />
+          <circle cx="0" cy="0" r="5.5" fill="#FFD93D" />
+        </g>
+
+        <!-- Gentle Curved Dotted Path Connecting Left Stand to Right Basket/Crate -->
+        <path d="M 520 695 Q 800 745 1075 685" fill="none" stroke="#F6E8C8" stroke-width="14" stroke-linecap="round" stroke-dasharray="22 26" opacity="0.85" />
+      </svg>
+
+      <!-- TOP NAVIGATION BAR -->
+      <header class="relative z-40 flex items-center justify-between px-4 sm:px-7 pt-3 sm:pt-4 pb-2">
+        <!-- Brand / Garden Title Pill -->
+        <div class="flex items-center gap-2.5 bg-white/90 backdrop-blur-sm px-3.5 sm:px-5 py-2 rounded-full shadow-md border-2 border-amber-200/80">
+          <span class="text-xl sm:text-2xl" role="img" aria-label="Sprout">🌱</span>
+          <span class="font-bold text-emerald-800 text-base sm:text-xl tracking-tight hidden md:inline">Garden Harvest</span>
+          <!-- Progress Counter Pill -->
+          <span id="progress-badge" class="ml-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-xs sm:text-sm">
+            0 / 6
+          </span>
+        </div>
+
+        <!-- Center Mode Switcher: Fruit vs Vegetable -->
+        <div class="flex items-center gap-2 sm:gap-3 bg-white/85 backdrop-blur-sm p-1.5 rounded-full shadow-lg border-2 border-amber-200/80" role="tablist" aria-label="Choose Vocabulary Category">
+          <button
+            id="btn-mode-fruit"
+            role="tab"
+            aria-selected="true"
+            class="btn-tactile flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full font-bold text-base sm:text-xl cursor-pointer bg-gradient-to-b from-rose-400 to-rose-500 text-white shadow-[0_4px_0_#be123c]"
+          >
+            <span class="text-xl sm:text-2xl">🍎</span>
+            <span>Fruit</span>
+          </button>
+
+          <button
+            id="btn-mode-vegetable"
+            role="tab"
+            aria-selected="false"
+            class="btn-tactile flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full font-bold text-base sm:text-xl cursor-pointer bg-amber-50 hover:bg-emerald-50 text-emerald-900"
+          >
+            <span class="text-xl sm:text-2xl">🥕</span>
+            <span>Vegetable</span>
+          </button>
+        </div>
+
+        <!-- Right Utility Controls: Sound Toggle, Settings, Fullscreen -->
+        <div class="flex items-center gap-2 sm:gap-2.5">
+          <!-- Sound Mute Toggle -->
+          <button
+            id="btn-sound"
+            title="Toggle Sound Effects"
+            aria-label="Toggle Sound Effects"
+            class="btn-tactile w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 hover:bg-amber-50 text-amber-800 border-2 border-amber-200 shadow-[0_4px_0_#d9770633] flex items-center justify-center cursor-pointer"
+          >
+            <svg id="icon-sound-on" class="w-6 h-6 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+              <path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path>
+            </svg>
+            <svg id="icon-sound-off" class="w-6 h-6 text-rose-500 hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+              <line x1="23" y1="9" x2="17" y2="15"></line>
+              <line x1="17" y1="9" x2="23" y2="15"></line>
+            </svg>
+          </button>
+
+          <!-- Settings Gear Button -->
+          <button
+            id="btn-settings"
+            title="Manage Fruit & Vegetable Words"
+            aria-label="Manage Fruit & Vegetable Words"
+            class="btn-tactile flex items-center gap-1.5 px-3.5 sm:px-4 h-11 sm:h-12 rounded-full bg-white/95 hover:bg-amber-50 text-amber-900 border-2 border-amber-200 shadow-[0_4px_0_#d9770633] font-bold text-sm sm:text-base cursor-pointer"
+          >
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+            <span class="hidden sm:inline">Settings</span>
+          </button>
+
+          <!-- Fullscreen Toggle -->
+          <button
+            id="btn-fullscreen"
+            title="Toggle Fullscreen"
+            aria-label="Toggle Fullscreen"
+            class="btn-tactile w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-white/95 hover:bg-amber-50 text-amber-800 border-2 border-amber-200 shadow-[0_4px_0_#d9770633] flex items-center justify-center cursor-pointer"
+          >
+            <svg class="w-5 h-5 sm:w-6 sm:h-6 text-amber-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- MAIN PLAYFIELD: LEFT GARDEN STAND & RIGHT BASKET/CRATE -->
+      <div id="playfield" class="relative flex-1 grid grid-cols-2 items-center px-4 sm:px-10 pb-4">
+        
+        <!-- LEFT SIDE: WOODEN GARDEN DISPLAY STAND + ACTIVE VOCABULARY ITEM -->
+        <div class="relative h-full flex flex-col items-center justify-center">
+          
+          <!-- Wooden Display Stand Backdrop -->
+          <div class="relative flex flex-col items-center justify-center w-[78%] max-w-[360px] aspect-[4/4.3]">
+            <!-- Wooden Signpost SVG Frame -->
+            <svg class="absolute inset-0 w-full h-full pointer-events-none drop-shadow-xl" viewBox="0 0 360 390">
+              <!-- Wooden Post Going into Grass -->
+              <rect x="156" y="295" width="48" height="92" rx="8" fill="#9E622B" stroke="#6E4119" stroke-width="4" />
+              <line x1="170" y1="305" x2="170" y2="375" stroke="#855020" stroke-width="3" stroke-linecap="round" />
+              <line x1="190" y1="305" x2="190" y2="375" stroke="#855020" stroke-width="3" stroke-linecap="round" />
+              <!-- Outer Wooden Frame -->
+              <rect x="14" y="14" width="332" height="296" rx="34" fill="#C98A4B" stroke="#7D4B1E" stroke-width="5" />
+              <!-- Inner Cream Sign Board -->
+              <rect x="30" y="30" width="300" height="264" rx="24" fill="#FFFDF7" stroke="#E5C89B" stroke-width="3" />
+              <!-- Corner Brass Nails -->
+              <circle cx="44" cy="44" r="5" fill="#D9A05B" />
+              <circle cx="316" cy="44" r="5" fill="#D9A05B" />
+              <circle cx="44" cy="280" r="5" fill="#D9A05B" />
+              <circle cx="316" cy="280" r="5" fill="#D9A05B" />
+            </svg>
+
+            <!-- Placeholder Ghost Outline when Dragging -->
+            <div id="stand-placeholder" class="w-[68%] h-[68%] rounded-3xl border-4 border-dashed border-amber-300/80 flex items-center justify-center text-amber-400 font-semibold text-base sm:text-lg text-center px-4">
+              Drop in the <span id="placeholder-target-name" class="mx-1 underline">basket</span>!
+            </div>
+
+            <!-- DRAGGABLE VOCABULARY CARD (Appears 1 at a time) -->
+            <div
+              id="draggable-card"
+              role="button"
+              tabindex="0"
+              aria-label="Draggable vocabulary item"
+              class="absolute top-[11%] w-[74%] aspect-square bg-white rounded-3xl shadow-[0_12px_28px_rgba(120,72,24,0.18)] border-4 border-amber-200 flex flex-col items-center justify-between p-3 sm:p-4 select-none"
+            >
+              <!-- Speaker Button in Top-Right Corner of Card -->
+              <button
+                id="btn-speak-word"
+                type="button"
+                title="Listen to word"
+                aria-label="Listen to word"
+                class="btn-tactile absolute top-2.5 right-2.5 w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-sky-100 hover:bg-sky-200 text-sky-700 flex items-center justify-center shadow-sm cursor-pointer z-20"
+              >
+                <svg class="w-5 h-5 sm:w-6 sm:h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path>
+                </svg>
+              </button>
+
+              <!-- Illustration Container -->
+              <div id="card-art" class="idle-bob w-[66%] h-[66%] flex items-center justify-center mt-1 pointer-events-none">
+                <!-- SVG or User Image injected dynamically -->
+              </div>
+
+              <!-- Beginner-Friendly Vocabulary Label -->
+              <div id="card-label" class="w-full text-center font-bold text-slate-800 text-2xl sm:text-3xl md:text-4xl tracking-wide pb-0.5 pointer-events-none truncate">
+                apple
+              </div>
+            </div>
+
+            <!-- Helper Hint Pill Below Stand -->
+            <div id="drag-hint-pill" class="absolute -bottom-3 bg-white/95 px-4 py-1.5 rounded-full shadow-md border-2 border-amber-200 text-amber-900 font-semibold text-xs sm:text-sm flex items-center gap-1.5">
+              <span>👆 Drag to the</span>
+              <span id="hint-container-word" class="font-bold text-rose-600">basket</span>
+              <span>👉</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- RIGHT SIDE: WOVEN BASKET (FRUIT) OR WOODEN CRATE (VEGETABLE) DROP ZONE -->
+        <div class="relative h-full flex flex-col items-center justify-center">
+          <div
+            id="drop-container"
+            class="relative w-[84%] max-w-[420px] aspect-[4/3.6] flex flex-col items-center justify-center transition-transform duration-200"
+          >
+            <!-- Soft Ground Shadow Beneath Basket/Crate -->
+            <div class="absolute bottom-[6%] w-[82%] h-[14%] rounded-full bg-emerald-950/20 blur-sm pointer-events-none"></div>
+
+            <!-- BACK LAYER OF CONTAINERS (Behind stacked items) -->
+            <!-- Basket Back (Handle + Dark Interior Opening) -->
+            <svg id="svg-basket-back" class="absolute inset-0 z-10 w-full h-full drop-shadow-xl pointer-events-none" viewBox="0 0 420 360">
+              <!-- Basket Handle -->
+              <path d="M 95 165 C 95 45, 325 45, 325 165" fill="none" stroke="#9C622B" stroke-width="22" stroke-linecap="round" />
+              <path d="M 95 165 C 95 45, 325 45, 325 165" fill="none" stroke="#C98A4B" stroke-width="14" stroke-linecap="round" stroke-dasharray="18 10" />
+              <!-- Basket Dark Interior Opening -->
+              <ellipse cx="210" cy="168" rx="152" ry="34" fill="#6E4019" />
+            </svg>
+
+            <!-- Crate Back (Interior Depth & Back Wall) -->
+            <svg id="svg-crate-back" class="absolute inset-0 z-10 w-full h-full drop-shadow-xl pointer-events-none hidden" viewBox="0 0 420 360">
+              <!-- Crate Back Top Board -->
+              <rect x="54" y="126" width="312" height="36" rx="8" fill="#8C5322" stroke="#5C3616" stroke-width="4" />
+              <!-- Crate Dark Interior Depth -->
+              <rect x="64" y="142" width="292" height="60" rx="8" fill="#5C3616" />
+            </svg>
+
+            <!-- STACKED COLLECTED ITEMS LAYER (Tucked neatly between back & front of basket/crate) -->
+            <div id="collected-peek" class="absolute inset-0 z-20 pointer-events-none overflow-visible">
+              <!-- Stacked items injected here in organized rows -->
+            </div>
+
+            <!-- FRONT LAYER OF CONTAINERS (Overlaps bottoms of stacked items) -->
+            <!-- Woven Picnic Basket Front Body & Rim -->
+            <svg id="svg-basket" class="relative z-30 w-full h-full pointer-events-none" viewBox="0 0 420 360">
+              <!-- Basket Main Woven Body -->
+              <path d="M 56 168 L 88 302 C 92 318, 108 328, 128 328 L 292 328 C 312 328, 328 318, 332 302 L 364 168 Z" fill="#DDA15E" stroke="#8C5322" stroke-width="5" stroke-linejoin="round" />
+
+              <!-- Woven Horizontal & Vertical Texture Lines -->
+              <g stroke="#B87735" stroke-width="4" opacity="0.75">
+                <line x1="66" y1="205" x2="354" y2="205" />
+                <line x1="74" y1="242" x2="346" y2="242" />
+                <line x1="82" y1="280" x2="338" y2="280" />
+                <line x1="125" y1="175" x2="138" y2="325" />
+                <line x1="170" y1="175" x2="176" y2="325" />
+                <line x1="210" y1="175" x2="210" y2="325" />
+                <line x1="250" y1="175" x2="244" y2="325" />
+                <line x1="295" y1="175" x2="282" y2="325" />
+              </g>
+
+              <!-- Braided Top Front Rim -->
+              <rect x="46" y="152" width="328" height="28" rx="14" fill="#E9B472" stroke="#8C5322" stroke-width="4.5" />
+              <line x1="64" y1="166" x2="356" y2="166" stroke="#B87735" stroke-width="4" stroke-dasharray="16 12" stroke-linecap="round" />
+
+              <!-- Cute Ribbon Tag on Front -->
+              <rect x="148" y="218" width="124" height="46" rx="14" fill="#FFFDF7" stroke="#F43F5E" stroke-width="4" />
+              <text x="210" y="248" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="23" fill="#E11D48">FRUIT</text>
+            </svg>
+
+            <!-- Rustic Wooden Garden Crate Front Slats -->
+            <svg id="svg-crate" class="relative z-30 w-full h-full pointer-events-none hidden" viewBox="0 0 420 360">
+              <!-- Left & Right Corner Posts -->
+              <rect x="54" y="138" width="26" height="187" rx="8" fill="#9E622B" stroke="#683D17" stroke-width="4" />
+              <rect x="340" y="138" width="26" height="187" rx="8" fill="#9E622B" stroke="#683D17" stroke-width="4" />
+
+              <!-- Horizontal Wooden Slats -->
+              <rect x="46" y="150" width="328" height="45" rx="10" fill="#D59A5A" stroke="#78471C" stroke-width="4.5" />
+              <rect x="46" y="208" width="328" height="45" rx="10" fill="#C98A4B" stroke="#78471C" stroke-width="4.5" />
+              <rect x="46" y="266" width="328" height="48" rx="10" fill="#BC7D3E" stroke="#78471C" stroke-width="4.5" />
+
+              <!-- Wood Nail Heads -->
+              <g fill="#683D17">
+                <circle cx="67" cy="172" r="4" />
+                <circle cx="353" cy="172" r="4" />
+                <circle cx="67" cy="230" r="4" />
+                <circle cx="353" cy="230" r="4" />
+                <circle cx="67" cy="290" r="4" />
+                <circle cx="353" cy="290" r="4" />
+              </g>
+
+              <!-- Garden Label Plaque on Front -->
+              <rect x="132" y="205" width="156" height="48" rx="14" fill="#FFFDF7" stroke="#16A34A" stroke-width="4" />
+              <text x="210" y="236" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="21" fill="#15803D">VEGETABLE</text>
+            </svg>
+          </div>
+        </div>
+      </div>
+
+      <!-- HAPPY CELEBRATION OVERLAY (Shown when all items in the round are collected) -->
+      <div id="celebration-modal" class="hidden absolute inset-0 z-50 bg-emerald-950/45 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="animate-pop-in bg-[#FFFDF7] border-4 border-amber-300 rounded-[32px] shadow-2xl max-w-md w-full p-6 sm:p-8 text-center flex flex-col items-center">
+          <div class="text-5xl sm:text-6xl mb-2">🎉🧺🌟</div>
+          <h2 class="text-3xl sm:text-4xl font-bold text-emerald-800 mb-2">Great Harvest!</h2>
+          <p id="celebration-subtitle" class="text-slate-600 font-medium text-lg sm:text-xl mb-6">
+            You collected all 6 fruits!
+          </p>
+          <div class="flex flex-wrap items-center justify-center gap-3 w-full">
+            <button
+              id="btn-play-again"
+              class="btn-tactile flex-1 min-w-[150px] py-3.5 px-6 rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-500 text-white font-bold text-xl shadow-[0_5px_0_#15803d] cursor-pointer"
+            >
+              Play Again 🔄
+            </button>
+            <button
+              id="btn-switch-other-mode"
+              class="btn-tactile flex-1 min-w-[150px] py-3.5 px-6 rounded-2xl bg-gradient-to-b from-amber-300 to-amber-400 text-amber-950 font-bold text-xl shadow-[0_5px_0_#b45309] cursor-pointer"
+            >
+              Try Veggies 🥕
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TEACHER-FRIENDLY SETTINGS MODAL / DRAWER -->
+      <div id="settings-modal" class="hidden absolute inset-0 z-50 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center p-3 sm:p-6">
+        <div class="animate-pop-in bg-[#FFFDF7] border-4 border-amber-300 rounded-[28px] shadow-2xl w-full max-w-4xl h-[90%] flex flex-col overflow-hidden">
+          
+          <!-- Settings Header -->
+          <div class="flex items-center justify-between px-5 sm:px-7 py-4 bg-amber-100/80 border-b-2 border-amber-200">
+            <div class="flex items-center gap-2.5">
+              <span class="text-2xl">⚙️</span>
+              <h2 class="text-xl sm:text-2xl font-bold text-amber-950">Garden Vocabulary Settings</h2>
+            </div>
+            <div class="flex items-center gap-2">
+              <button
+                id="btn-reset-defaults"
+                type="button"
+                class="btn-tactile px-3.5 py-2 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border-2 border-rose-200 font-bold text-xs sm:text-sm cursor-pointer"
+              >
+                Reset Defaults
+              </button>
+              <button
+                id="btn-close-settings"
+                type="button"
+                class="btn-tactile px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-sm sm:text-base shadow-[0_3px_0_#15803d] cursor-pointer"
+              >
+                Done ✓
+              </button>
+            </div>
+          </div>
+
+          <!-- Settings Body: Left Add Form + Right Current Lists -->
+          <div class="flex-1 grid grid-cols-1 md:grid-cols-12 overflow-hidden">
+            
+            <!-- Left Column: Folder Reference & Add New Item Form -->
+            <div class="md:col-span-5 p-4 sm:p-5 bg-amber-50/60 border-b-2 md:border-b-0 md:border-r-2 border-amber-200 flex flex-col gap-4 overflow-y-auto garden-scroll">
+              
+              <!-- Image Folder Path Reference & Batch Folder Import Box -->
+              <div class="bg-white rounded-2xl border-2 border-amber-300/90 p-3.5 shadow-sm space-y-2.5">
+                <div class="flex items-center justify-between">
+                  <label for="input-folder-path" class="text-xs sm:text-sm font-bold text-amber-950 flex items-center gap-1.5">
+                    <span>📂</span> Image Folder Path
+                  </label>
+                  <button
+                    id="btn-copy-folder-path"
+                    type="button"
+                    title="Copy folder path"
+                    class="btn-tactile px-2.5 py-1 rounded-lg bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold text-xs cursor-pointer"
+                  >
+                    Copy Path
+                  </button>
+                </div>
+
+                <input
+                  id="input-folder-path"
+                  type="text"
+                  value="Downloads/F and V game"
+                  placeholder="Downloads/F and V game"
+                  class="w-full px-3 py-2 rounded-xl bg-amber-50/70 border-2 border-amber-200 focus:border-emerald-500 focus:outline-none font-mono text-xs sm:text-sm text-slate-800"
+                />
+
+                <!-- Batch Import from "F and V game" Folder -->
+                <div class="pt-0.5">
+                  <label
+                    for="input-folder-picker"
+                    class="btn-tactile flex items-center justify-center gap-2 w-full py-2 px-3 rounded-xl bg-sky-100 hover:bg-sky-200 text-sky-900 border-2 border-sky-300 font-bold text-xs sm:text-sm cursor-pointer text-center"
+                  >
+                    <span>📁 Select Folder / Files</span>
+                  </label>
+                  <input
+                    id="input-folder-picker"
+                    type="file"
+                    webkitdirectory
+                    directory
+                    multiple
+                    accept="image/*"
+                    class="sr-only"
+                  />
+                  <p class="text-[11px] text-slate-500 mt-1 leading-tight">
+                    Imports images from your <span class="font-semibold text-amber-900">F and V game</span> folder using filenames as words (into selected category below).
+                  </p>
+                </div>
+              </div>
+
+              <!-- Single Item Add Form -->
+              <form id="add-item-form" class="flex-1 flex flex-col justify-between space-y-3">
+                <div class="space-y-3">
+                  <h3 class="text-base sm:text-lg font-bold text-amber-900 flex items-center gap-2">
+                    <span>➕</span> Add Picture Word
+                  </h3>
+
+                  <!-- Category Selector -->
+                  <div>
+                    <span class="block text-xs sm:text-sm font-bold text-slate-700 mb-1">1. Category</span>
+                    <div class="grid grid-cols-2 gap-2">
+                      <label class="cursor-pointer">
+                        <input type="radio" name="item-category" value="fruit" checked class="peer sr-only" />
+                        <div class="py-1.5 px-3 rounded-xl border-2 border-amber-200 bg-white peer-checked:border-rose-500 peer-checked:bg-rose-50 text-center font-bold text-sm text-slate-700 peer-checked:text-rose-700 transition">
+                          🍎 Fruit
+                        </div>
+                      </label>
+                      <label class="cursor-pointer">
+                        <input type="radio" name="item-category" value="vegetable" class="peer sr-only" />
+                        <div class="py-1.5 px-3 rounded-xl border-2 border-amber-200 bg-white peer-checked:border-emerald-600 peer-checked:bg-emerald-50 text-center font-bold text-sm text-slate-700 peer-checked:text-emerald-800 transition">
+                          🥕 Vegetable
+                        </div>
+                      </label>
+                    </div>
+                  </div>
+
+                  <!-- Word Name Input -->
+                  <div>
+                    <label for="input-word-name" class="block text-xs sm:text-sm font-bold text-slate-700 mb-1">2. Word Name</label>
+                    <input
+                      id="input-word-name"
+                      type="text"
+                      required
+                      maxlength="22"
+                      placeholder="e.g., peach, potato..."
+                      class="w-full px-3.5 py-2 rounded-xl bg-white border-2 border-amber-300 focus:border-emerald-500 focus:outline-none font-semibold text-slate-800 text-sm sm:text-base"
+                    />
+                  </div>
+
+                  <!-- Individual Image File Upload -->
+                  <div>
+                    <label for="input-image-file" class="block text-xs sm:text-sm font-bold text-slate-700 mb-1">3. Upload Single Picture</label>
+                    <label
+                      for="input-image-file"
+                      class="flex flex-col items-center justify-center w-full h-24 rounded-2xl border-2 border-dashed border-amber-400 bg-white hover:bg-amber-50/70 cursor-pointer transition p-2 text-center"
+                    >
+                      <img id="upload-preview" alt="Preview" class="hidden h-14 w-14 object-contain rounded-lg mb-1" />
+                      <span id="upload-prompt" class="text-xs sm:text-sm font-semibold text-amber-800">
+                        🖼️ Choose single image file<br/>
+                        <span class="text-[11px] font-normal text-slate-500">(PNG, JPG, SVG, WebP)</span>
+                      </span>
+                    </label>
+                    <input id="input-image-file" type="file" accept="image/*" required class="sr-only" />
+                  </div>
+                </div>
+
+                <!-- Status Feedback & Submit -->
+                <div class="pt-2">
+                  <p id="form-feedback" class="text-xs font-bold text-emerald-700 min-h-[18px] mb-1.5"></p>
+                  <button
+                    type="submit"
+                    class="btn-tactile w-full py-2.5 px-4 rounded-xl bg-gradient-to-b from-emerald-400 to-emerald-500 text-white font-bold text-base shadow-[0_4px_0_#15803d] cursor-pointer"
+                  >
+                    Add to Garden 🌱
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Right Column: Manage Current Fruit & Vegetable Lists -->
+            <div class="md:col-span-7 p-4 sm:p-6 overflow-y-auto garden-scroll space-y-5">
+              <!-- Fruit List Section -->
+              <div>
+                <div class="flex items-center justify-between mb-2.5">
+                  <h3 class="font-bold text-rose-700 text-base sm:text-lg flex items-center gap-1.5">
+                    <span>🍎</span> Fruits (<span id="count-fruits">0</span>)
+                  </h3>
+                </div>
+                <div id="list-fruits" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+
+              <!-- Vegetable List Section -->
+              <div>
+                <div class="flex items-center justify-between mb-2.5">
+                  <h3 class="font-bold text-emerald-800 text-base sm:text-lg flex items-center gap-1.5">
+                    <span>🥕</span> Vegetables (<span id="count-vegetables">0</span>)
+                  </h3>
+                </div>
+                <div id="list-vegetables" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+                  <!-- Populated by JS -->
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- SMALL INLINE TOAST NOTIFICATION (Replaces alert/confirm) -->
+      <div id="toast-banner" class="pointer-events-none opacity-0 transition-opacity duration-200 absolute bottom-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800/90 text-white px-5 py-2 rounded-full font-semibold text-sm shadow-lg">
+        Message
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    /**
+     * ============================================================================
+     * GARDEN HARVEST — BEGINNER VOCABULARY GAME
+     * ============================================================================
+     * Self-contained HTML5/CSS/JS game featuring:
+     * 1. Custom friendly vector SVG illustrations for 6 fruits and 6 vegetables.
+     * 2. Web Audio API synthesizer for cute chimes, pops, and fanfares + Speech API.
+     * 3. Smooth pointer (mouse + touch) drag-and-drop into the basket or crate.
+     * 4. LocalStorage-backed teacher settings modal to add/remove custom items.
+     */
+
+    // ---------------------------------------------------------------------------
+    // 1. DEFAULT ILLUSTRATED VOCABULARY ITEMS (Cute Custom Vector SVGs)
+    // ---------------------------------------------------------------------------
+    const DEFAULT_ITEMS = [
+      // --- FRUITS ---
+      {
+        id: 'fruit-apple',
+        name: 'apple',
+        category: 'fruit',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M70 36 C70 20, 82 14, 88 18" fill="none" stroke="#7C4A21" stroke-width="6" stroke-linecap="round"/>
+          <path d="M72 28 C88 14, 108 20, 104 34 C94 40, 78 36, 72 28 Z" fill="#5CCB5F" stroke="#2F8533" stroke-width="3"/>
+          <path d="M70 42 C44 32, 22 52, 26 84 C30 112, 52 124, 70 118 C88 124, 110 112, 114 84 C118 52, 96 32, 70 42 Z" fill="#FF4D5E" stroke="#C81E32" stroke-width="4"/>
+          <ellipse cx="46" cy="64" rx="8" ry="15" transform="rotate(-22 46 64)" fill="#FF9AA4" opacity="0.75"/>
+          <circle cx="58" cy="82" r="3.5" fill="#4A151B"/>
+          <circle cx="82" cy="82" r="3.5" fill="#4A151B"/>
+          <path d="M64 89 Q70 95 76 89" fill="none" stroke="#4A151B" stroke-width="3" stroke-linecap="round"/>
+        </svg>`
+      },
+      {
+        id: 'fruit-banana',
+        name: 'banana',
+        category: 'fruit',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M36 30 C26 68, 46 112, 108 106 C116 105, 118 96, 110 92 C70 84, 54 58, 52 28 C51 22, 38 22, 36 30 Z" fill="#FFE14D" stroke="#D4A017" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M40 24 L48 24 L49 31 L38 31 Z" fill="#8C5828"/>
+          <circle cx="112" cy="99" r="4" fill="#8C5828"/>
+          <path d="M45 48 C48 72, 66 90, 96 96" fill="none" stroke="#FFF4A3" stroke-width="4" stroke-linecap="round"/>
+        </svg>`
+      },
+      {
+        id: 'fruit-strawberry',
+        name: 'strawberry',
+        category: 'fruit',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M34 46 C34 26, 106 26, 106 46 C106 82, 82 118, 70 118 C58 118, 34 82, 34 46 Z" fill="#FF4769" stroke="#C2183B" stroke-width="4"/>
+          <path d="M42 36 L56 46 L70 34 L84 46 L98 36 L90 24 L50 24 Z" fill="#4ADE80" stroke="#15803D" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M70 14 L70 26" stroke="#15803D" stroke-width="5" stroke-linecap="round"/>
+          <g fill="#FFE885">
+            <circle cx="52" cy="58" r="2.8"/><circle cx="70" cy="56" r="2.8"/><circle cx="88" cy="58" r="2.8"/>
+            <circle cx="58" cy="76" r="2.8"/><circle cx="82" cy="76" r="2.8"/>
+            <circle cx="70" cy="95" r="2.8"/>
+          </g>
+        </svg>`
+      },
+      {
+        id: 'fruit-orange',
+        name: 'orange',
+        category: 'fruit',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <circle cx="70" cy="76" r="44" fill="#FF981A" stroke="#D96B00" stroke-width="4"/>
+          <path d="M70 32 L70 20" stroke="#6B4423" stroke-width="5" stroke-linecap="round"/>
+          <path d="M70 24 C86 14, 102 22, 96 32 C86 36, 76 30, 70 24 Z" fill="#5CCB5F" stroke="#2F8533" stroke-width="3"/>
+          <ellipse cx="52" cy="56" rx="7" ry="12" transform="rotate(-25 52 56)" fill="#FFC875" opacity="0.75"/>
+          <circle cx="88" cy="86" r="2.2" fill="#D96B00"/><circle cx="95" cy="76" r="2.2" fill="#D96B00"/><circle cx="82" cy="96" r="2.2" fill="#D96B00"/>
+        </svg>`
+      },
+      {
+        id: 'fruit-grapes',
+        name: 'grapes',
+        category: 'fruit',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M70 32 L70 16 M58 24 C66 16, 82 16, 90 26" fill="none" stroke="#5CCB5F" stroke-width="5" stroke-linecap="round"/>
+          <g fill="#9B5DE5" stroke="#6930C3" stroke-width="3.5">
+            <circle cx="52" cy="48" r="15"/><circle cx="70" cy="48" r="15"/><circle cx="88" cy="48" r="15"/>
+            <circle cx="58" cy="70" r="15"/><circle cx="82" cy="70" r="15"/>
+            <circle cx="64" cy="92" r="15"/><circle cx="78" cy="92" r="15"/>
+            <circle cx="70" cy="110" r="14"/>
+          </g>
+          <g fill="#D8BBFF" opacity="0.8">
+            <circle cx="48" cy="43" r="3.5"/><circle cx="66" cy="43" r="3.5"/><circle cx="84" cy="43" r="3.5"/>
+            <circle cx="54" cy="65" r="3.5"/><circle cx="78" cy="65" r="3.5"/><circle cx="66" cy="105" r="3.5"/>
+          </g>
+        </svg>`
+      },
+      {
+        id: 'fruit-watermelon',
+        name: 'watermelon',
+        category: 'fruit',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M18 52 C18 98, 122 98, 122 52 Z" fill="#38B000" stroke="#1E6000" stroke-width="4" stroke-linejoin="round"/>
+          <path d="M26 52 C26 88, 114 88, 114 52 Z" fill="#E9FFDB"/>
+          <path d="M32 52 C32 80, 108 80, 108 52 Z" fill="#FF4D6D"/>
+          <g fill="#2B2D42">
+            <ellipse cx="52" cy="62" rx="2.5" ry="4"/><ellipse cx="70" cy="66" rx="2.5" ry="4"/><ellipse cx="88" cy="62" rx="2.5" ry="4"/>
+          </g>
+        </svg>`
+      },
+
+      // --- VEGETABLES ---
+      {
+        id: 'veg-carrot',
+        name: 'carrot',
+        category: 'vegetable',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M70 36 C58 14, 46 18, 56 38 M70 36 C70 10, 70 10, 70 38 M70 36 C82 14, 94 18, 84 38" fill="none" stroke="#4ADE80" stroke-width="6" stroke-linecap="round"/>
+          <path d="M46 44 C46 34, 94 34, 94 44 L76 118 C74 124, 66 124, 64 118 Z" fill="#FF7B1C" stroke="#C85200" stroke-width="4" stroke-linejoin="round"/>
+          <line x1="54" y1="60" x2="72" y2="60" stroke="#C85200" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="68" y1="78" x2="84" y2="78" stroke="#C85200" stroke-width="3.5" stroke-linecap="round"/>
+          <line x1="60" y1="96" x2="74" y2="96" stroke="#C85200" stroke-width="3.5" stroke-linecap="round"/>
+        </svg>`
+      },
+      {
+        id: 'veg-broccoli',
+        name: 'broccoli',
+        category: 'vegetable',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M56 76 L52 116 C52 121, 88 121, 88 116 L84 76 Z" fill="#8CD458" stroke="#4D8B26" stroke-width="4" stroke-linejoin="round"/>
+          <g fill="#38A349" stroke="#1E6B2B" stroke-width="4">
+            <circle cx="44" cy="60" r="22"/>
+            <circle cx="96" cy="60" r="22"/>
+            <circle cx="70" cy="46" r="25"/>
+            <circle cx="58" cy="66" r="18"/>
+            <circle cx="82" cy="66" r="18"/>
+          </g>
+        </svg>`
+      },
+      {
+        id: 'veg-corn',
+        name: 'corn',
+        category: 'vegetable',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <ellipse cx="70" cy="66" rx="24" ry="44" fill="#FFD43B" stroke="#D99B00" stroke-width="4"/>
+          <g stroke="#E0A800" stroke-width="2.5">
+            <line x1="58" y1="28" x2="58" y2="104"/><line x1="70" y1="22" x2="70" y2="108"/><line x1="82" y1="28" x2="82" y2="104"/>
+            <line x1="48" y1="48" x2="92" y2="48"/><line x1="46" y1="66" x2="94" y2="66"/><line x1="48" y1="84" x2="92" y2="84"/>
+          </g>
+          <path d="M44 58 C34 86, 48 114, 70 118 C58 98, 54 78, 44 58 Z" fill="#5CCB5F" stroke="#2B8A3E" stroke-width="3.5" stroke-linejoin="round"/>
+          <path d="M96 58 C106 86, 92 114, 70 118 C82 98, 86 78, 96 58 Z" fill="#5CCB5F" stroke="#2B8A3E" stroke-width="3.5" stroke-linejoin="round"/>
+        </svg>`
+      },
+      {
+        id: 'veg-tomato',
+        name: 'tomato',
+        category: 'vegetable',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <ellipse cx="70" cy="76" rx="46" ry="38" fill="#FF4938" stroke="#C92A1D" stroke-width="4"/>
+          <path d="M46 46 L62 52 L70 38 L78 52 L94 46 L82 36 L70 22 L58 36 Z" fill="#40C057" stroke="#2B8A3E" stroke-width="3" stroke-linejoin="round"/>
+          <ellipse cx="50" cy="64" rx="7" ry="11" transform="rotate(-25 50 64)" fill="#FFA8A8" opacity="0.75"/>
+        </svg>`
+      },
+      {
+        id: 'veg-cucumber',
+        name: 'cucumber',
+        category: 'vegetable',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <g transform="rotate(-32 70 70)">
+            <rect x="48" y="18" width="44" height="104" rx="22" fill="#51CF66" stroke="#2B8A3E" stroke-width="4"/>
+            <rect x="56" y="28" width="10" height="84" rx="5" fill="#8CE99A" opacity="0.65"/>
+            <circle cx="80" cy="44" r="2.5" fill="#2B8A3E"/>
+            <circle cx="76" cy="70" r="2.5" fill="#2B8A3E"/>
+            <circle cx="80" cy="94" r="2.5" fill="#2B8A3E"/>
+          </g>
+        </svg>`
+      },
+      {
+        id: 'veg-eggplant',
+        name: 'eggplant',
+        category: 'vegetable',
+        isDefault: true,
+        svg: `<svg viewBox="0 0 140 140" class="w-full h-full">
+          <path d="M56 36 C48 64, 38 96, 62 114 C86 128, 106 106, 98 76 C92 54, 84 42, 78 34 Z" fill="#7950F2" stroke="#4C2889" stroke-width="4"/>
+          <path d="M52 40 L64 46 L70 36 L78 46 L86 38 L76 26 L62 26 Z" fill="#51CF66" stroke="#2B8A3E" stroke-width="3" stroke-linejoin="round"/>
+          <path d="M68 26 C68 18, 76 14, 80 18" fill="none" stroke="#2B8A3E" stroke-width="5" stroke-linecap="round"/>
+          <ellipse cx="62" cy="74" rx="6" ry="14" transform="rotate(14 62 74)" fill="#B197FC" opacity="0.65"/>
+        </svg>`
+      }
+    ];
+
+    // ---------------------------------------------------------------------------
+    // 2. SOUND ENGINE (Web Audio API Chimes & Web Speech API Pronunciation)
+    // ---------------------------------------------------------------------------
+    const SoundFX = {
+      ctx: null,
+      muted: false,
+
+      init() {
+        if (!this.ctx) {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (AudioCtx) this.ctx = new AudioCtx();
+        }
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      },
+
+      playTone(freq, type = 'sine', duration = 0.18, delay = 0, gainVal = 0.16) {
+        if (this.muted) return;
+        this.init();
+        if (!this.ctx) return;
+
+        const now = this.ctx.currentTime + delay;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = type;
+        osc.frequency.setValueAtTime(freq, now);
+
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.exponentialRampToValueAtTime(gainVal, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + duration + 0.02);
+      },
+
+      pickup() {
+        this.playTone(440, 'triangle', 0.1, 0, 0.12);
+        this.playTone(587.33, 'triangle', 0.12, 0.05, 0.12);
+      },
+
+      snapBack() {
+        this.playTone(330, 'sine', 0.12, 0, 0.1);
+        this.playTone(261.63, 'sine', 0.14, 0.06, 0.1);
+      },
+
+      matchSuccess() {
+        // Cheerful C-E-G-C arpeggio chime
+        this.playTone(523.25, 'triangle', 0.18, 0.00, 0.16);
+        this.playTone(659.25, 'triangle', 0.18, 0.07, 0.16);
+        this.playTone(783.99, 'triangle', 0.22, 0.14, 0.17);
+        this.playTone(1046.50, 'sine', 0.36, 0.21, 0.18);
+      },
+
+      roundWin() {
+        const notes = [523.25, 659.25, 783.99, 1046.50, 987.77, 1046.50];
+        notes.forEach((n, idx) => {
+          this.playTone(n, 'triangle', 0.24, idx * 0.09, 0.16);
+        });
+      },
+
+      speak(word) {
+        if (this.muted || !('speechSynthesis' in window)) return;
+        try {
+          window.speechSynthesis.cancel();
+          const utter = new SpeechSynthesisUtterance(word);
+          utter.rate = 0.9;
+          utter.pitch = 1.15;
+          window.speechSynthesis.speak(utter);
+        } catch (err) {
+          // Ignore speech synthesis errors on restricted browsers
+        }
+      }
+    };
+
+    // ---------------------------------------------------------------------------
+    // 3. STATE MANAGEMENT & PERSISTENCE
+    // ---------------------------------------------------------------------------
+    const STORAGE_KEY = 'garden_harvest_vocab_v1';
+    const FOLDER_PATH_STORAGE_KEY = 'garden_harvest_folder_path_v1';
+    const DEFAULT_FOLDER_PATH = 'Downloads/F and V game';
+
+    let state = {
+      items: [],
+      folderPath: DEFAULT_FOLDER_PATH,
+      mode: 'fruit', // 'fruit' | 'vegetable'
+      deck: [],
+      collected: [],
+      currentItem: null,
+      isTransitioning: false
+    };
+
+    function loadItems() {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            state.items = parsed;
+            return;
+          }
+        }
+      } catch (e) {
+        console.warn('Could not read saved items, loading defaults.');
+      }
+      state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+    }
+
+    function loadFolderPath() {
+      try {
+        const savedPath = localStorage.getItem(FOLDER_PATH_STORAGE_KEY);
+        if (savedPath && savedPath.trim()) {
+          state.folderPath = savedPath.trim();
+        }
+      } catch (e) {
+        // Fallback to default folder path
+      }
+      if (dom.inputFolderPath) {
+        dom.inputFolderPath.value = state.folderPath;
+      }
+    }
+
+    function saveFolderPath(newPath) {
+      state.folderPath = newPath.trim() || DEFAULT_FOLDER_PATH;
+      try {
+        localStorage.setItem(FOLDER_PATH_STORAGE_KEY, state.folderPath);
+      } catch (e) {
+        // Ignore storage errors
+      }
+    }
+
+    function saveItems() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
+      } catch (e) {
+        showToast('Storage full! Try smaller images.');
+      }
+    }
+
+    function shuffleArray(arr) {
+      const copy = [...arr];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    // ---------------------------------------------------------------------------
+    // 4. DOM REFERENCES
+    // ---------------------------------------------------------------------------
+    const dom = {
+      stage: document.getElementById('game-stage'),
+      btnFruit: document.getElementById('btn-mode-fruit'),
+      btnVeg: document.getElementById('btn-mode-vegetable'),
+      progressBadge: document.getElementById('progress-badge'),
+      btnSound: document.getElementById('btn-sound'),
+      iconSoundOn: document.getElementById('icon-sound-on'),
+      iconSoundOff: document.getElementById('icon-sound-off'),
+      btnSettings: document.getElementById('btn-settings'),
+      btnFullscreen: document.getElementById('btn-fullscreen'),
+
+      draggableCard: document.getElementById('draggable-card'),
+      cardArt: document.getElementById('card-art'),
+      cardLabel: document.getElementById('card-label'),
+      btnSpeakWord: document.getElementById('btn-speak-word'),
+      placeholderTargetName: document.getElementById('placeholder-target-name'),
+      hintContainerWord: document.getElementById('hint-container-word'),
+
+      dropContainer: document.getElementById('drop-container'),
+      collectedPeek: document.getElementById('collected-peek'),
+      svgBasketBack: document.getElementById('svg-basket-back'),
+      svgBasket: document.getElementById('svg-basket'),
+      svgCrateBack: document.getElementById('svg-crate-back'),
+      svgCrate: document.getElementById('svg-crate'),
+
+      celebrationModal: document.getElementById('celebration-modal'),
+      celebrationSubtitle: document.getElementById('celebration-subtitle'),
+      btnPlayAgain: document.getElementById('btn-play-again'),
+      btnSwitchOtherMode: document.getElementById('btn-switch-other-mode'),
+
+      settingsModal: document.getElementById('settings-modal'),
+      btnCloseSettings: document.getElementById('btn-close-settings'),
+      btnResetDefaults: document.getElementById('btn-reset-defaults'),
+      inputFolderPath: document.getElementById('input-folder-path'),
+      btnCopyFolderPath: document.getElementById('btn-copy-folder-path'),
+      inputFolderPicker: document.getElementById('input-folder-picker'),
+      addItemForm: document.getElementById('add-item-form'),
+      inputWordName: document.getElementById('input-word-name'),
+      inputImageFile: document.getElementById('input-image-file'),
+      uploadPreview: document.getElementById('upload-preview'),
+      uploadPrompt: document.getElementById('upload-prompt'),
+      formFeedback: document.getElementById('form-feedback'),
+      countFruits: document.getElementById('count-fruits'),
+      countVegetables: document.getElementById('count-vegetables'),
+      listFruits: document.getElementById('list-fruits'),
+      listVegetables: document.getElementById('list-vegetables'),
+
+      toastBanner: document.getElementById('toast-banner')
+    };
+
+    let toastTimeout = null;
+    function showToast(msg) {
+      dom.toastBanner.textContent = msg;
+      dom.toastBanner.classList.remove('opacity-0');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        dom.toastBanner.classList.add('opacity-0');
+      }, 2400);
+    }
+
+    // ---------------------------------------------------------------------------
+    // 5. GAME ROUND LOGIC & RENDERING
+    // ---------------------------------------------------------------------------
+    function setMode(newMode) {
+      state.mode = newMode;
+      dom.celebrationModal.classList.add('hidden');
+
+      const isFruit = newMode === 'fruit';
+
+      // Style active mode button
+      if (isFruit) {
+        dom.btnFruit.className = 'btn-tactile flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full font-bold text-base sm:text-xl cursor-pointer bg-gradient-to-b from-rose-400 to-rose-500 text-white shadow-[0_4px_0_#be123c]';
+        dom.btnVeg.className = 'btn-tactile flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full font-bold text-base sm:text-xl cursor-pointer bg-amber-50 hover:bg-emerald-50 text-emerald-900';
+        dom.svgBasketBack.classList.remove('hidden');
+        dom.svgBasket.classList.remove('hidden');
+        dom.svgCrateBack.classList.add('hidden');
+        dom.svgCrate.classList.add('hidden');
+        dom.placeholderTargetName.textContent = 'basket';
+        dom.hintContainerWord.textContent = 'basket';
+        dom.hintContainerWord.className = 'font-bold text-rose-600';
+      } else {
+        dom.btnVeg.className = 'btn-tactile flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full font-bold text-base sm:text-xl cursor-pointer bg-gradient-to-b from-emerald-500 to-emerald-600 text-white shadow-[0_4px_0_#15803d]';
+        dom.btnFruit.className = 'btn-tactile flex items-center gap-2 px-4 sm:px-6 py-2 sm:py-2.5 rounded-full font-bold text-base sm:text-xl cursor-pointer bg-amber-50 hover:bg-rose-50 text-rose-900';
+        dom.svgCrateBack.classList.remove('hidden');
+        dom.svgCrate.classList.remove('hidden');
+        dom.svgBasketBack.classList.add('hidden');
+        dom.svgBasket.classList.add('hidden');
+        dom.placeholderTargetName.textContent = 'crate';
+        dom.hintContainerWord.textContent = 'crate';
+        dom.hintContainerWord.className = 'font-bold text-emerald-700';
+      }
+
+      startRound();
+    }
+
+    function startRound() {
+      const modeItems = state.items.filter(item => item.category === state.mode);
+      state.deck = shuffleArray(modeItems);
+      state.collected = [];
+      state.isTransitioning = false;
+      dom.collectedPeek.innerHTML = '';
+      updateProgress();
+      showNextItem(true);
+    }
+
+    function updateProgress() {
+      const total = state.collected.length + state.deck.length + (state.currentItem ? 1 : 0);
+      dom.progressBadge.textContent = `${state.collected.length} / ${total}`;
+    }
+
+    function renderItemVisual(item) {
+      if (item.svg) {
+        return item.svg;
+      }
+      if (item.imageUrl) {
+        return `<img src="${item.imageUrl}" alt="${item.name}" class="w-full h-full object-contain rounded-2xl pointer-events-none" />`;
+      }
+      return `<span class="text-6xl">🌱</span>`;
+    }
+
+    function showNextItem(isFirst = false) {
+      resetCardPosition();
+
+      if (state.deck.length === 0) {
+        state.currentItem = null;
+        dom.draggableCard.classList.add('hidden');
+        updateProgress();
+        triggerCelebration();
+        return;
+      }
+
+      state.currentItem = state.deck.shift();
+      updateProgress();
+
+      dom.draggableCard.classList.remove('hidden', 'animate-pop-in');
+      dom.cardArt.innerHTML = renderItemVisual(state.currentItem);
+      dom.cardLabel.textContent = state.currentItem.name;
+
+      // Force reflow for pop-in animation
+      void dom.draggableCard.offsetWidth;
+      dom.draggableCard.classList.add('animate-pop-in');
+    }
+
+    function addCollectedPeek(item) {
+      const index = state.collected.length - 1;
+      const mini = document.createElement('div');
+
+      // Organized pyramid/tiered stacking inside the basket/crate opening:
+      // Row 0 (front base row): 4 items tucked right behind the front rim/slat
+      // Row 1 (second tier): 3 items nestled neatly above the gaps
+      // Row 2 (top tier): 2 items crowning the stack
+      // Further rows cycle cleanly so even large custom decks stay tidy!
+      const tierCapacities = [4, 3, 2];
+      let remaining = index;
+      let tier = 0;
+      while (remaining >= tierCapacities[tier % tierCapacities.length]) {
+        remaining -= tierCapacities[tier % tierCapacities.length];
+        tier++;
+      }
+
+      const colsInTier = tierCapacities[tier % tierCapacities.length];
+      const col = remaining;
+
+      // Horizontal centering within the container opening (24% to 76% of container width)
+      const spacingX = 14.5; // percentage spacing between adjacent items
+      const rowWidth = (colsInTier - 1) * spacingX;
+      const centerX = 50 - rowWidth / 2 + col * spacingX;
+
+      // Vertical stacking upwards inside the container opening (top % relative to 420x360 viewBox)
+      // Front rim/top slat sits around top ~42% (y=152/360), so items sit at 27% and stack higher
+      const baseTopPct = state.mode === 'fruit' ? 27.5 : 26.5;
+      const tierOffsetPct = Math.min(tier, 4) * 6.8;
+      const topPct = baseTopPct - tierOffsetPct;
+
+      // Subtle natural tilt alternating left/right for a neat hand-packed look
+      const tiltPattern = [-7, 5, -4, 7];
+      const rot = tiltPattern[(col + tier) % tiltPattern.length];
+
+      mini.className = 'absolute w-[21%] aspect-square animate-pop-in drop-shadow-md flex items-center justify-center';
+      mini.style.left = `${centerX}%`;
+      mini.style.top = `${topPct}%`;
+      mini.style.marginLeft = '-10.5%'; // Center horizontally on left%
+      // Higher tiers render behind lower front-row items for natural depth
+      mini.style.zIndex = `${20 - tier}`;
+      mini.style.transform = `rotate(${rot}deg)`;
+      mini.innerHTML = renderItemVisual(item);
+      dom.collectedPeek.appendChild(mini);
+    }
+
+    function spawnSparkles() {
+      const containerRect = dom.dropContainer.getBoundingClientRect();
+      const stageRect = dom.stage.getBoundingClientRect();
+      const centerX = containerRect.left - stageRect.left + containerRect.width / 2;
+      const centerY = containerRect.top - stageRect.top + containerRect.height * 0.42;
+
+      const emojis = ['✨', '🌟', '🍃', '💛', '🌿'];
+      for (let i = 0; i < 12; i++) {
+        const p = document.createElement('div');
+        p.className = 'particle text-2xl sm:text-3xl';
+        p.textContent = emojis[i % emojis.length];
+        const angle = (Math.PI * 2 * i) / 12 + (Math.random() * 0.3);
+        const dist = 75 + Math.random() * 75;
+        p.style.left = `${centerX}px`;
+        p.style.top = `${centerY}px`;
+        p.style.setProperty('--tx', `${Math.cos(angle) * dist}px`);
+        p.style.setProperty('--ty', `${Math.sin(angle) * dist - 25}px`);
+        p.style.setProperty('--rot', `${Math.random() * 240 - 120}deg`);
+        dom.stage.appendChild(p);
+        setTimeout(() => p.remove(), 900);
+      }
+    }
+
+    function triggerCelebration() {
+      SoundFX.roundWin();
+      const count = state.collected.length;
+      const label = state.mode === 'fruit'
+        ? (count === 1 ? 'fruit' : 'fruits')
+        : (count === 1 ? 'vegetable' : 'vegetables');
+
+      dom.celebrationSubtitle.textContent = `You collected all ${count} ${label}!`;
+      dom.btnSwitchOtherMode.textContent = state.mode === 'fruit' ? 'Try Veggies 🥕' : 'Try Fruits 🍎';
+      dom.celebrationModal.classList.remove('hidden');
+    }
+
+    // ---------------------------------------------------------------------------
+    // 6. SMOOTH POINTER DRAG & DROP (MOUSE + TOUCH)
+    // ---------------------------------------------------------------------------
+    let dragState = {
+      active: false,
+      startX: 0,
+      startY: 0,
+      currentX: 0,
+      currentY: 0
+    };
+
+    function resetCardPosition() {
+      dragState.active = false;
+      dragState.currentX = 0;
+      dragState.currentY = 0;
+      dom.draggableCard.style.transition = 'transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1)';
+      dom.draggableCard.style.transform = 'translate(0px, 0px) scale(1)';
+      dom.draggableCard.classList.remove('is-dragging');
+      dom.dropContainer.classList.remove('drop-zone-active');
+    }
+
+    function isOverDropZone() {
+      const cardRect = dom.draggableCard.getBoundingClientRect();
+      const dropRect = dom.dropContainer.getBoundingClientRect();
+
+      const cardCenterX = cardRect.left + cardRect.width / 2;
+      const cardCenterY = cardRect.top + cardRect.height / 2;
+
+      const padX = dropRect.width * 0.08;
+      const padY = dropRect.height * 0.08;
+
+      return (
+        cardCenterX >= dropRect.left - padX &&
+        cardCenterX <= dropRect.right + padX &&
+        cardCenterY >= dropRect.top - padY &&
+        cardCenterY <= dropRect.bottom + padY
+      );
+    }
+
+    function onPointerDown(e) {
+      // Ignore if clicking the speaker button or transitioning
+      if (e.target.closest('#btn-speak-word') || state.isTransitioning || !state.currentItem) return;
+
+      SoundFX.init();
+      SoundFX.pickup();
+
+      dragState.active = true;
+      dragState.startX = e.clientX;
+      dragState.startY = e.clientY;
+
+      dom.draggableCard.setPointerCapture(e.pointerId);
+      dom.draggableCard.style.transition = 'none';
+      dom.draggableCard.classList.add('is-dragging');
+      dom.draggableCard.classList.remove('animate-pop-in');
+    }
+
+    function onPointerMove(e) {
+      if (!dragState.active) return;
+
+      const dx = e.clientX - dragState.startX;
+      const dy = e.clientY - dragState.startY;
+      dragState.currentX = dx;
+      dragState.currentY = dy;
+
+      const tilt = Math.max(-10, Math.min(10, dx * 0.03));
+      dom.draggableCard.style.transform = `translate(${dx}px, ${dy}px) scale(1.07) rotate(${tilt}deg)`;
+
+      if (isOverDropZone()) {
+        dom.dropContainer.classList.add('drop-zone-active');
+      } else {
+        dom.dropContainer.classList.remove('drop-zone-active');
+      }
+    }
+
+    function onPointerUp(e) {
+      if (!dragState.active) return;
+      dragState.active = false;
+      dom.draggableCard.classList.remove('is-dragging');
+      dom.dropContainer.classList.remove('drop-zone-active');
+
+      if (isOverDropZone()) {
+        handleSuccessfulDrop();
+      } else {
+        // If user barely moved (tapped the card), speak the word aloud!
+        if (Math.hypot(dragState.currentX, dragState.currentY) < 10 && state.currentItem) {
+          SoundFX.speak(state.currentItem.name);
+        } else {
+          SoundFX.snapBack();
+        }
+        resetCardPosition();
+      }
+    }
+
+    function handleSuccessfulDrop() {
+      if (!state.currentItem || state.isTransitioning) return;
+      state.isTransitioning = true;
+
+      const matchedItem = state.currentItem;
+      state.collected.push(matchedItem);
+
+      SoundFX.matchSuccess();
+      SoundFX.speak(matchedItem.name);
+      spawnSparkles();
+
+      // Animate card shrinking into basket/crate
+      dom.draggableCard.style.transition = 'transform 0.25s ease-in, opacity 0.22s ease-in';
+      dom.draggableCard.style.transform = `translate(${dragState.currentX}px, ${dragState.currentY + 25}px) scale(0.25)`;
+      dom.draggableCard.style.opacity = '0';
+
+      // Bounce the basket/crate
+      dom.dropContainer.classList.remove('animate-catch');
+      void dom.dropContainer.offsetWidth;
+      dom.dropContainer.classList.add('animate-catch');
+
+      addCollectedPeek(matchedItem);
+
+      setTimeout(() => {
+        dom.draggableCard.style.opacity = '1';
+        state.isTransitioning = false;
+        showNextItem(false);
+      }, 360);
+    }
+
+    // ---------------------------------------------------------------------------
+    // 7. SETTINGS MODAL & CUSTOM ITEM MANAGEMENT
+    // ---------------------------------------------------------------------------
+    let pendingUploadDataUrl = null;
+
+    function openSettings() {
+      renderSettingsLists();
+      dom.settingsModal.classList.remove('hidden');
+    }
+
+    function closeSettings() {
+      dom.settingsModal.classList.add('hidden');
+      // Refresh active round so newly added/deleted items take effect immediately
+      startRound();
+    }
+
+    function renderSettingsLists() {
+      const fruits = state.items.filter(i => i.category === 'fruit');
+      const veggies = state.items.filter(i => i.category === 'vegetable');
+
+      dom.countFruits.textContent = fruits.length;
+      dom.countVegetables.textContent = veggies.length;
+
+      dom.listFruits.innerHTML = fruits.map(item => createSettingsCardHTML(item, fruits.length > 1)).join('');
+      dom.listVegetables.innerHTML = veggies.map(item => createSettingsCardHTML(item, veggies.length > 1)).join('');
+    }
+
+    function createSettingsCardHTML(item, canDelete) {
+      const deleteBtn = canDelete
+        ? `<button type="button" data-delete-id="${item.id}" title="Remove ${item.name}" class="absolute top-1.5 right-1.5 w-7 h-7 rounded-full bg-rose-100 hover:bg-rose-500 text-rose-700 hover:text-white font-bold text-xs flex items-center justify-center transition cursor-pointer">✕</button>`
+        : '';
+
+      return `
+        <div class="relative bg-white rounded-2xl border-2 border-amber-200 p-2.5 flex flex-col items-center justify-between shadow-sm">
+          ${deleteBtn}
+          <div class="w-14 h-14 flex items-center justify-center my-1">
+            ${renderItemVisual(item)}
+          </div>
+          <span class="font-bold text-slate-800 text-sm text-center truncate w-full">${item.name}</span>
+        </div>
+      `;
+    }
+
+    // Resize image file to lightweight PNG data URL
+    function resizeImageFileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onerror = () => reject(new Error('Invalid image file'));
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const maxDim = 280;
+            let w = img.width;
+            let h = img.height;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) {
+                h = Math.round((h * maxDim) / w);
+                w = maxDim;
+              } else {
+                w = Math.round((w * maxDim) / h);
+                h = maxDim;
+              }
+            }
+            canvas.width = w;
+            canvas.height = h;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0, w, h);
+            resolve(canvas.toDataURL('image/png'));
+          };
+          img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    // Extract clean beginner vocabulary word from filename (e.g. "green_apple-01.png" -> "green apple")
+    function cleanWordFromFilename(filename) {
+      const withoutExt = filename.replace(/\.[^/.]+$/, '');
+      const cleaned = withoutExt
+        .replace(/[_-]+/g, ' ')
+        .replace(/\d+/g, '')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+      return cleaned.slice(0, 22);
+    }
+
+    // Persist Image Folder Path edits & support one-click copy
+    dom.inputFolderPath.addEventListener('input', (e) => {
+      saveFolderPath(e.target.value);
+    });
+
+    dom.btnCopyFolderPath.addEventListener('click', () => {
+      const pathVal = dom.inputFolderPath.value.trim() || DEFAULT_FOLDER_PATH;
+      dom.inputFolderPath.select();
+      try {
+        document.execCommand('copy');
+        showToast(`Copied path: ${pathVal}`);
+      } catch (err) {
+        showToast(`Folder path: ${pathVal}`);
+      }
+      window.getSelection?.().removeAllRanges?.();
+    });
+
+    // Handle Batch Folder / Files Import ("F and V game" folder)
+    dom.inputFolderPicker.addEventListener('change', async (e) => {
+      const files = Array.from(e.target.files || []).filter(f => f.type.startsWith('image/'));
+      if (files.length === 0) {
+        showToast('No image files found in selected folder.');
+        return;
+      }
+
+      // Update displayed folder path if browser provides webkitRelativePath
+      const firstRelPath = files[0].webkitRelativePath;
+      if (firstRelPath && firstRelPath.includes('/')) {
+        const topFolder = firstRelPath.split('/')[0];
+        if (topFolder) {
+          const updatedPath = topFolder.toLowerCase().includes('downloads')
+            ? topFolder
+            : `Downloads/${topFolder}`;
+          dom.inputFolderPath.value = updatedPath;
+          saveFolderPath(updatedPath);
+        }
+      }
+
+      const selectedCategory = dom.addItemForm.querySelector('input[name="item-category"]:checked').value;
+      let addedCount = 0;
+
+      for (const file of files) {
+        const wordName = cleanWordFromFilename(file.name);
+        if (!wordName) continue;
+
+        try {
+          const dataUrl = await resizeImageFileToDataUrl(file);
+          state.items.push({
+            id: `folder-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+            name: wordName,
+            category: selectedCategory,
+            isDefault: false,
+            imageUrl: dataUrl
+          });
+          addedCount++;
+        } catch (err) {
+          // Skip unreadable files
+        }
+      }
+
+      dom.inputFolderPicker.value = '';
+
+      if (addedCount > 0) {
+        saveItems();
+        renderSettingsLists();
+        SoundFX.matchSuccess();
+        const catLabel = selectedCategory === 'fruit' ? 'Fruits' : 'Vegetables';
+        dom.formFeedback.textContent = `Imported ${addedCount} picture${addedCount === 1 ? '' : 's'} into ${catLabel}!`;
+        dom.formFeedback.className = 'text-xs font-bold text-emerald-700 min-h-[18px] mb-1.5';
+        showToast(`Imported ${addedCount} image${addedCount === 1 ? '' : 's'} into ${catLabel}!`);
+      }
+    });
+
+    // Handle Individual Image Upload FileReader
+    dom.inputImageFile.addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      // Auto-fill word name if currently empty
+      if (!dom.inputWordName.value.trim()) {
+        const suggested = cleanWordFromFilename(file.name);
+        if (suggested) dom.inputWordName.value = suggested;
+      }
+
+      try {
+        pendingUploadDataUrl = await resizeImageFileToDataUrl(file);
+        dom.uploadPreview.src = pendingUploadDataUrl;
+        dom.uploadPreview.classList.remove('hidden');
+        dom.uploadPrompt.innerHTML = `<span class="text-emerald-700 font-bold">✓ Ready! Click to change</span>`;
+      } catch (err) {
+        showToast('Could not load image file.');
+      }
+    });
+
+    // Handle Add New Item Submit
+    dom.addItemForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const rawName = dom.inputWordName.value.trim().toLowerCase();
+      const category = dom.addItemForm.querySelector('input[name="item-category"]:checked').value;
+
+      if (!rawName) {
+        dom.formFeedback.textContent = 'Please type a word name.';
+        dom.formFeedback.className = 'text-xs font-bold text-rose-600 min-h-[18px] mb-1.5';
+        return;
+      }
+      if (!pendingUploadDataUrl) {
+        dom.formFeedback.textContent = 'Please choose an image file.';
+        dom.formFeedback.className = 'text-xs font-bold text-rose-600 min-h-[18px] mb-1.5';
+        return;
+      }
+
+      const newItem = {
+        id: `custom-${Date.now()}`,
+        name: rawName,
+        category,
+        isDefault: false,
+        imageUrl: pendingUploadDataUrl
+      };
+
+      state.items.push(newItem);
+      saveItems();
+      renderSettingsLists();
+
+      // Reset form inputs
+      dom.inputWordName.value = '';
+      dom.inputImageFile.value = '';
+      pendingUploadDataUrl = null;
+      dom.uploadPreview.classList.add('hidden');
+      dom.uploadPrompt.innerHTML = `🖼️ Choose single image file<br/><span class="text-[11px] font-normal text-slate-500">(PNG, JPG, SVG, WebP)</span>`;
+
+      dom.formFeedback.textContent = `Added "${rawName}" to ${category}s!`;
+      dom.formFeedback.className = 'text-xs font-bold text-emerald-700 min-h-[18px] mb-1.5';
+      SoundFX.matchSuccess();
+    });
+
+    // Delegate Delete Item Clicks
+    dom.settingsModal.addEventListener('click', (e) => {
+      const delBtn = e.target.closest('[data-delete-id]');
+      if (!delBtn) return;
+
+      const id = delBtn.getAttribute('data-delete-id');
+      const target = state.items.find(i => i.id === id);
+      if (!target) return;
+
+      const sameCatCount = state.items.filter(i => i.category === target.category).length;
+      if (sameCatCount <= 1) {
+        showToast(`Keep at least 1 ${target.category} in the garden!`);
+        return;
+      }
+
+      state.items = state.items.filter(i => i.id !== id);
+      saveItems();
+      renderSettingsLists();
+      SoundFX.snapBack();
+    });
+
+    // Reset Defaults (Two-click safety without confirm())
+    let resetConfirmPending = false;
+    let resetTimer = null;
+    dom.btnResetDefaults.addEventListener('click', () => {
+      if (!resetConfirmPending) {
+        resetConfirmPending = true;
+        dom.btnResetDefaults.textContent = 'Click again to confirm';
+        dom.btnResetDefaults.classList.add('bg-rose-500', 'text-white');
+        resetTimer = setTimeout(() => {
+          resetConfirmPending = false;
+          dom.btnResetDefaults.textContent = 'Reset Defaults';
+          dom.btnResetDefaults.classList.remove('bg-rose-500', 'text-white');
+        }, 3000);
+      } else {
+        clearTimeout(resetTimer);
+        resetConfirmPending = false;
+        dom.btnResetDefaults.textContent = 'Reset Defaults';
+        dom.btnResetDefaults.classList.remove('bg-rose-500', 'text-white');
+
+        state.items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+        saveItems();
+        saveFolderPath(DEFAULT_FOLDER_PATH);
+        dom.inputFolderPath.value = DEFAULT_FOLDER_PATH;
+        renderSettingsLists();
+        SoundFX.matchSuccess();
+        showToast('Garden restored to default fruits & vegetables!');
+      }
+    });
+
+    // ---------------------------------------------------------------------------
+    // 8. WIRE UP UI CONTROLS & INITIALIZE
+    // ---------------------------------------------------------------------------
+    dom.btnFruit.addEventListener('click', () => {
+      SoundFX.pickup();
+      setMode('fruit');
+    });
+
+    dom.btnVeg.addEventListener('click', () => {
+      SoundFX.pickup();
+      setMode('vegetable');
+    });
+
+    dom.btnSpeakWord.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (state.currentItem) {
+        SoundFX.speak(state.currentItem.name);
+      }
+    });
+
+    dom.btnSound.addEventListener('click', () => {
+      SoundFX.muted = !SoundFX.muted;
+      dom.iconSoundOn.classList.toggle('hidden', SoundFX.muted);
+      dom.iconSoundOff.classList.toggle('hidden', !SoundFX.muted);
+      if (!SoundFX.muted) SoundFX.pickup();
+    });
+
+    dom.btnSettings.addEventListener('click', () => {
+      SoundFX.pickup();
+      openSettings();
+    });
+
+    dom.btnCloseSettings.addEventListener('click', () => {
+      SoundFX.pickup();
+      closeSettings();
+    });
+
+    dom.btnFullscreen.addEventListener('click', () => {
+      if (!document.fullscreenElement) {
+        dom.stage.requestFullscreen?.().catch(() => {});
+      } else {
+        document.exitFullscreen?.().catch(() => {});
+      }
+    });
+
+    dom.btnPlayAgain.addEventListener('click', () => {
+      SoundFX.pickup();
+      dom.celebrationModal.classList.add('hidden');
+      startRound();
+    });
+
+    dom.btnSwitchOtherMode.addEventListener('click', () => {
+      SoundFX.pickup();
+      setMode(state.mode === 'fruit' ? 'vegetable' : 'fruit');
+    });
+
+    // Pointer Drag Listeners on Vocabulary Card
+    dom.draggableCard.addEventListener('pointerdown', onPointerDown);
+    window.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
+    window.addEventListener('pointercancel', onPointerUp);
+
+    // Boot Game
+    window.addEventListener('DOMContentLoaded', () => {
+      loadItems();
+      loadFolderPath();
+      setMode('fruit');
+    });
+  </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunny Produce Stand — Fruits & Veggies Motion Game</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --wood-dark: #7c3f1d;
+      --wood-mid: #a45729;
+      --wood-light: #d98a4e;
+      --awning-red: #ef4444;
+      --awning-cream: #fffbeb;
+      --fruit-accent: #f97316;
+      --veg-accent: #16a34a;
+    }
+
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #1e293b;
+      font-family: 'Fredoka', sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* 16:9 Responsive Stage Container */
+    #stage-wrapper {
+      width: 100vw;
+      height: 100vh;
+      max-width: 177.78vh;
+      max-height: 56.25vw;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(180deg, #bae6fd 0%, #e0f2fe 55%, #fde68a 100%);
+      box-shadow: 0 25px 60px rgba(0, 0, 0, 0.55);
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Striped Market Awning */
+    .market-awning {
+      background: repeating-linear-gradient(
+        90deg,
+        #ef4444 0px,
+        #ef4444 56px,
+        #fffbeb 56px,
+        #fffbeb 112px
+      );
+      position: relative;
+      box-shadow: 0 8px 18px rgba(124, 63, 29, 0.28);
+      z-index: 30;
+    }
+
+    .market-awning::after {
+      content: '';
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: -14px;
+      height: 14px;
+      background: radial-gradient(circle at 28px 0, #ef4444 26px, transparent 27px),
+                  radial-gradient(circle at 84px 0, #fffbeb 26px, transparent 27px);
+      background-size: 112px 14px;
+      filter: drop-shadow(0 4px 3px rgba(0,0,0,0.15));
+    }
+
+    /* Wooden Counter & Beams */
+    .wood-panel {
+      background: linear-gradient(180deg, #b86532 0%, #8e471e 100%);
+      border: 4px solid #5c2b0e;
+      box-shadow: inset 0 3px 0 rgba(255, 220, 180, 0.35), 0 8px 20px rgba(0,0,0,0.3);
+    }
+
+    .wood-plank-bottom {
+      background: repeating-linear-gradient(
+        90deg,
+        #9a4e23 0px,
+        #9a4e23 140px,
+        #7c3d19 140px,
+        #7c3d19 144px
+      );
+      border-top: 6px solid #5c2b0e;
+      box-shadow: inset 0 6px 12px rgba(255, 210, 160, 0.25);
+    }
+
+    /* Chunky Preschool Buttons */
+    .btn-preschool {
+      transition: transform 0.14s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.14s ease;
+      cursor: pointer;
+    }
+    .btn-preschool:hover {
+      transform: translateY(-3px) scale(1.02);
+    }
+    .btn-preschool:active {
+      transform: translateY(3px) scale(0.98);
+    }
+
+    /* Produce Card Styling */
+    .produce-card {
+      background: #ffffff;
+      border-radius: 28px;
+      border: 8px solid #f59e0b;
+      box-shadow: 0 16px 35px rgba(0, 0, 0, 0.32), inset 0 0 0 4px #fef3c7;
+      transition: all 0.22s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .produce-card.active-side {
+      transform: scale(1.06);
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 10px rgba(56, 189, 248, 0.55), 0 20px 45px rgba(0, 0, 0, 0.4);
+    }
+
+    .produce-card.correct-card {
+      border-color: #22c55e !important;
+      background: #f0fdf4 !important;
+      box-shadow: 0 0 0 14px rgba(34, 197, 94, 0.65), 0 25px 50px rgba(0, 0, 0, 0.45) !important;
+      transform: scale(1.08);
+    }
+
+    .produce-card.wrong-card {
+      border-color: #ef4444 !important;
+      background: #fef2f2 !important;
+      opacity: 0.72;
+      transform: scale(0.95);
+    }
+
+    /* Mirrored Webcam Video */
+    #webcam-video {
+      transform: scaleX(-1);
+      object-fit: cover;
+    }
+
+    /* Animations */
+    @keyframes floatSlow {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-7px); }
+    }
+    .animate-float {
+      animation: floatSlow 3s ease-in-out infinite;
+    }
+
+    @keyframes popIn {
+      0% { transform: scale(0.5); opacity: 0; }
+      75% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-pop {
+      animation: popIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    }
+
+    @keyframes pulseUrgent {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.14); }
+    }
+    .timer-urgent {
+      animation: pulseUrgent 0.6s infinite;
+    }
+
+    /* Custom Scrollbar for Settings */
+    ::-webkit-scrollbar {
+      width: 10px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #fef3c7;
+      border-radius: 999px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #d97706;
+      border-radius: 999px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="stage-wrapper">
+  <!-- Decorative Background Clouds & Sun -->
+  <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
+    <div class="absolute top-14 right-12 w-24 h-24 rounded-full bg-yellow-300 shadow-[0_0_50px_#fde047] opacity-90"></div>
+    <svg class="absolute top-16 left-10 w-36 h-16 text-white/80" viewBox="0 0 120 50" fill="currentColor">
+      <path d="M25,45 H95 A20,20 0 0,0 95,5 A25,25 0 0,0 50,10 A18,18 0 0,0 25,45 Z"/>
+    </svg>
+    <svg class="absolute top-24 right-1/3 w-44 h-20 text-white/70" viewBox="0 0 120 50" fill="currentColor">
+      <path d="M25,45 H95 A20,20 0 0,0 95,5 A25,25 0 0,0 50,10 A18,18 0 0,0 25,45 Z"/>
+    </svg>
+  </div>
+
+  <!-- TOP MARKET AWNING & HEADER BAR -->
+  <header class="market-awning px-5 py-2.5 flex items-center justify-between shrink-0">
+    <!-- Left Brand & Score -->
+    <div class="flex items-center gap-3">
+      <button onclick="goHome()" class="btn-preschool bg-amber-100 hover:bg-white text-amber-950 border-4 border-amber-800 rounded-2xl px-3.5 py-1.5 flex items-center gap-2 shadow-md" title="Back to Mode Selection">
+        <span class="text-2xl">🧺</span>
+        <span class="font-extrabold text-lg tracking-wide hidden sm:inline">Sunny Stand</span>
+      </button>
+
+      <!-- Score Pill -->
+      <div id="score-badge" class="hidden bg-white/95 border-4 border-amber-600 rounded-2xl px-4 py-1 flex items-center gap-2 shadow-md">
+        <span class="text-xl">⭐</span>
+        <span class="font-black text-amber-900 text-lg"><span id="score-count">0</span> / <span id="round-total">0</span></span>
+      </div>
+    </div>
+
+    <!-- Center Active Mode Switcher -->
+    <div class="flex items-center gap-2 bg-amber-950/85 p-1.5 rounded-2xl border-2 border-amber-300/60 shadow-lg">
+      <button id="btn-switch-fruit" onclick="switchMode('fruit')" class="btn-preschool px-4 py-1.5 rounded-xl font-extrabold text-base flex items-center gap-1.5 transition-colors bg-orange-500 text-white shadow">
+        <span>🍎</span>
+        <span>Fruits</span>
+      </button>
+      <button id="btn-switch-veg" onclick="switchMode('vegetable')" class="btn-preschool px-4 py-1.5 rounded-xl font-extrabold text-base flex items-center gap-1.5 transition-colors text-amber-100 hover:bg-white/10">
+        <span>🥦</span>
+        <span>Vegetables</span>
+      </button>
+    </div>
+
+    <!-- Right Controls: Camera, Sound, Add Pictures (Settings), Fullscreen -->
+    <div class="flex items-center gap-2">
+      <button id="btn-cam-toggle" onclick="toggleCamera()" class="btn-preschool bg-sky-100 hover:bg-white text-sky-900 border-4 border-sky-700 rounded-2xl px-3 py-1.5 font-bold text-sm flex items-center gap-1.5 shadow-md" title="Toggle Webcam Motion Detection">
+        <span id="cam-status-icon" class="text-lg">📷</span>
+        <span id="cam-status-text" class="hidden md:inline">Camera On</span>
+      </button>
+
+      <button id="btn-sound-toggle" onclick="toggleSound()" class="btn-preschool bg-emerald-100 hover:bg-white text-emerald-900 border-4 border-emerald-700 rounded-2xl p-2 shadow-md" title="Toggle Sound">
+        <span id="sound-icon" class="text-xl leading-none">🔊</span>
+      </button>
+
+      <button onclick="openSettings()" class="btn-preschool bg-amber-300 hover:bg-amber-200 text-amber-950 border-4 border-amber-800 rounded-2xl px-3.5 py-1.5 font-extrabold text-sm flex items-center gap-1.5 shadow-md" title="Add Custom Pictures">
+        <span class="text-lg">⚙️</span>
+        <span class="hidden sm:inline">Add Pictures</span>
+      </button>
+
+      <button onclick="toggleFullscreen()" class="btn-preschool bg-white hover:bg-slate-100 text-slate-800 border-4 border-slate-700 rounded-2xl p-2 shadow-md" title="Toggle Fullscreen">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.8" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT STAGE -->
+  <main class="relative flex-1 flex flex-col items-center justify-center p-4 z-10 overflow-hidden">
+
+    <!-- SCREEN 1: MODE SELECTION (FRUITS OR VEGETABLES) -->
+    <section id="screen-select" class="w-full max-w-4xl flex flex-col items-center justify-center text-center animate-pop">
+      <div class="wood-panel rounded-3xl px-8 py-5 mb-7 max-w-2xl">
+        <h1 class="text-3xl sm:text-5xl font-black text-amber-50 drop-shadow-[0_3px_0_#451a03] tracking-wide">
+          Welcome to the Produce Stand!
+        </h1>
+        <p class="text-amber-200 text-lg sm:text-xl font-bold mt-1">
+          Pick a basket to start playing!
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-10 w-full max-w-3xl px-4">
+        <!-- Fruits Choice Card -->
+        <button onclick="selectCategory('fruit')" class="btn-preschool group bg-gradient-to-b from-orange-400 to-red-500 border-8 border-white rounded-[36px] p-6 sm:p-8 shadow-[0_18px_35px_rgba(0,0,0,0.28)] flex flex-col items-center">
+          <div class="w-32 h-32 sm:w-40 sm:h-40 bg-white/95 rounded-full flex items-center justify-center shadow-inner mb-4 group-hover:scale-105 transition-transform">
+            <span class="text-7xl sm:text-8xl">🍓</span>
+          </div>
+          <span class="text-3xl sm:text-4xl font-black text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.3)]">
+            Fruits
+          </span>
+          <span class="mt-2 bg-white/25 text-white font-bold px-4 py-1 rounded-full text-sm">
+            <span id="fruit-count-label">6</span> Pictures Ready
+          </span>
+        </button>
+
+        <!-- Vegetables Choice Card -->
+        <button onclick="selectCategory('vegetable')" class="btn-preschool group bg-gradient-to-b from-lime-500 to-emerald-600 border-8 border-white rounded-[36px] p-6 sm:p-8 shadow-[0_18px_35px_rgba(0,0,0,0.28)] flex flex-col items-center">
+          <div class="w-32 h-32 sm:w-40 sm:h-40 bg-white/95 rounded-full flex items-center justify-center shadow-inner mb-4 group-hover:scale-105 transition-transform">
+            <span class="text-7xl sm:text-8xl">🥕</span>
+          </div>
+          <span class="text-3xl sm:text-4xl font-black text-white drop-shadow-[0_3px_0_rgba(0,0,0,0.3)]">
+            Vegetables
+          </span>
+          <span class="mt-2 bg-white/25 text-white font-bold px-4 py-1 rounded-full text-sm">
+            <span id="veg-count-label">6</span> Pictures Ready
+          </span>
+        </button>
+      </div>
+
+      <!-- Quick Prompt to Load "F and V game" folder -->
+      <div class="mt-6 bg-white/85 backdrop-blur-sm border-2 border-amber-400 rounded-2xl px-5 py-2.5 flex items-center gap-3 shadow-md">
+        <span class="text-2xl">📁</span>
+        <p class="text-amber-950 font-bold text-sm sm:text-base">
+          Have your own <span class="underline decoration-orange-500 decoration-2">"F and V game"</span> photos?
+          <button onclick="openSettings()" class="text-orange-600 hover:text-orange-700 font-black underline ml-1">Add them here!</button>
+        </p>
+      </div>
+    </section>
+
+    <!-- SCREEN 2: INSTRUCTION & START SCREEN -->
+    <section id="screen-ready" class="hidden w-full max-w-3xl flex flex-col items-center justify-center text-center animate-pop">
+      <div class="bg-white border-8 border-amber-500 rounded-[40px] p-7 sm:p-10 shadow-2xl w-full flex flex-col items-center">
+        <div id="ready-badge" class="px-5 py-1.5 rounded-full text-white font-black text-lg uppercase tracking-wider mb-4 bg-orange-500">
+          Fruits Mode
+        </div>
+
+        <div id="ready-emoji" class="text-8xl sm:text-9xl mb-4 animate-float">🍎</div>
+
+        <!-- Required Exact Instruction Text -->
+        <h2 id="ready-instruction" class="text-4xl sm:text-6xl font-black text-slate-800 mb-3 tracking-tight">
+          Choose the fruit.
+        </h2>
+
+        <p class="text-slate-600 font-bold text-lg sm:text-xl max-w-xl mb-7">
+          Stand on the side of the screen that shows the matching picture before the <span class="text-amber-600 font-black">5-second</span> timer finishes!
+        </p>
+
+        <div class="flex flex-wrap items-center justify-center gap-4">
+          <button onclick="goHome()" class="btn-preschool bg-slate-200 hover:bg-slate-300 text-slate-700 font-extrabold text-xl px-7 py-4 rounded-3xl border-b-4 border-slate-400">
+            ← Back
+          </button>
+          <button onclick="startRound()" class="btn-preschool bg-gradient-to-b from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white font-black text-3xl sm:text-4xl px-12 py-5 rounded-3xl border-b-8 border-green-800 shadow-xl flex items-center gap-3">
+            <span>▶</span>
+            <span>Start</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- SCREEN 3: ACTIVE GAMEPLAY ARENA -->
+    <section id="screen-play" class="hidden relative w-full h-full flex flex-col justify-between rounded-3xl overflow-hidden border-8 border-amber-800 bg-slate-900 shadow-2xl">
+      
+      <!-- Live Mirrored Webcam Feed Background -->
+      <video id="webcam-video" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover opacity-90"></video>
+
+      <!-- Fallback Background if Camera is Off/Unavailable -->
+      <div id="no-camera-bg" class="hidden absolute inset-0 bg-gradient-to-b from-sky-200 via-amber-50 to-amber-200 flex flex-col items-center justify-center">
+        <div class="text-6xl mb-2 opacity-40">🏪</div>
+        <p class="text-amber-900/60 font-extrabold text-lg">Click or tap the Left or Right card to choose!</p>
+      </div>
+
+      <!-- Subtle Center Divider Line -->
+      <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-1.5 border-l-4 border-dashed border-white/60 pointer-events-none z-10"></div>
+
+      <!-- Left & Right Highlight Zones (Visualizing where the child stands) -->
+      <div id="zone-left-highlight" class="absolute inset-y-0 left-0 w-1/2 bg-sky-400/0 transition-colors duration-150 pointer-events-none z-10"></div>
+      <div id="zone-right-highlight" class="absolute inset-y-0 right-0 w-1/2 bg-sky-400/0 transition-colors duration-150 pointer-events-none z-10"></div>
+
+      <!-- TOP HUD: Instruction Banner + 5-Second Countdown -->
+      <div class="relative z-20 flex flex-col items-center pt-3 px-4">
+        <div class="bg-white/95 backdrop-blur-md border-4 border-amber-500 rounded-3xl px-6 py-2 shadow-xl flex items-center gap-4">
+          <span id="hud-mode-icon" class="text-3xl">🍎</span>
+          <h2 id="hud-instruction" class="text-2xl sm:text-4xl font-black text-slate-800">
+            Choose the fruit.
+          </h2>
+          <!-- Circular 5-Second Countdown Badge -->
+          <div id="timer-circle" class="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-amber-500 border-4 border-amber-800 text-white flex items-center justify-center font-black text-3xl sm:text-4xl shadow-md">
+            5
+          </div>
+        </div>
+
+        <!-- 5-Second Progress Bar -->
+        <div class="w-full max-w-xl h-4 bg-black/40 rounded-full overflow-hidden mt-2 border-2 border-white/80 p-0.5">
+          <div id="timer-bar" class="h-full bg-gradient-to-r from-green-400 via-yellow-400 to-red-500 rounded-full transition-all duration-100 ease-linear" style="width: 100%;"></div>
+        </div>
+      </div>
+
+      <!-- MIDDLE ARENA: LEFT & RIGHT PRODUCE CARDS -->
+      <div class="relative z-20 flex-1 grid grid-cols-2 gap-6 sm:gap-16 px-4 sm:px-10 py-3 items-center">
+        
+        <!-- LEFT SIDE CARD -->
+        <div class="flex flex-col items-center justify-center h-full">
+          <button id="card-left" onclick="manualSelectSide('left')" class="produce-card w-full max-w-[330px] aspect-[4/4.2] p-4 sm:p-5 flex flex-col items-center justify-between cursor-pointer relative">
+            <span class="absolute -top-4 left-4 bg-sky-500 text-white font-black text-xs sm:text-sm px-3 py-1 rounded-full border-2 border-white shadow">
+              ◀ LEFT SIDE
+            </span>
+            <div id="card-left-media" class="flex-1 w-full flex items-center justify-center overflow-hidden rounded-2xl bg-amber-50/70 p-2">
+              <!-- Image or SVG injected here -->
+            </div>
+            <div id="card-left-label" class="mt-2 text-2xl sm:text-3xl font-black text-slate-800 tracking-wide">
+              Apple
+            </div>
+          </button>
+        </div>
+
+        <!-- RIGHT SIDE CARD -->
+        <div class="flex flex-col items-center justify-center h-full">
+          <button id="card-right" onclick="manualSelectSide('right')" class="produce-card w-full max-w-[330px] aspect-[4/4.2] p-4 sm:p-5 flex flex-col items-center justify-between cursor-pointer relative">
+            <span class="absolute -top-4 right-4 bg-purple-500 text-white font-black text-xs sm:text-sm px-3 py-1 rounded-full border-2 border-white shadow">
+              RIGHT SIDE ▶
+            </span>
+            <div id="card-right-media" class="flex-1 w-full flex items-center justify-center overflow-hidden rounded-2xl bg-amber-50/70 p-2">
+              <!-- Image or SVG injected here -->
+            </div>
+            <div id="card-right-label" class="mt-2 text-2xl sm:text-3xl font-black text-slate-800 tracking-wide">
+              Carrot
+            </div>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- BOTTOM PLAYER POSITION METER & NEXT BAR -->
+      <div class="relative z-20 px-4 pb-3 flex flex-col items-center">
+        <!-- Live Position Indicator Pill -->
+        <div id="position-tracker-pill" class="bg-slate-900/85 text-white border-2 border-white/70 rounded-full px-5 py-1.5 flex items-center gap-3 shadow-lg text-sm sm:text-base font-extrabold">
+          <span>🧍 You are on:</span>
+          <span id="detected-side-text" class="px-3 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase">
+            Center (Step Left or Right!)
+          </span>
+        </div>
+      </div>
+
+      <!-- ROUND RESULT OVERLAY (Appears when 5s ends) -->
+      <div id="result-overlay" class="hidden absolute inset-0 z-30 bg-black/55 backdrop-blur-sm flex flex-col items-center justify-center p-4 animate-pop">
+        <div id="result-box" class="bg-white border-8 border-green-500 rounded-[40px] px-8 py-6 sm:px-12 sm:py-8 max-w-xl w-full text-center shadow-2xl flex flex-col items-center">
+          <div id="result-emoji" class="text-7xl sm:text-8xl mb-2">🎉</div>
+          <h3 id="result-title" class="text-4xl sm:text-5xl font-black text-green-600 mb-2">
+            Great Job!
+          </h3>
+          <p id="result-subtitle" class="text-xl sm:text-2xl font-bold text-slate-700 mb-6">
+            The Apple is a fruit!
+          </p>
+
+          <div class="flex flex-wrap items-center justify-center gap-4">
+            <button onclick="switchMode(currentMode === 'fruit' ? 'vegetable' : 'fruit')" class="btn-preschool bg-amber-200 hover:bg-amber-300 text-amber-950 border-4 border-amber-600 font-extrabold text-lg sm:text-xl px-6 py-3.5 rounded-2xl">
+              Switch to <span id="btn-next-mode-name">Vegetables</span>
+            </button>
+            <button id="btn-next-round" onclick="nextRound()" class="btn-preschool bg-gradient-to-b from-sky-400 to-blue-600 hover:from-sky-500 hover:to-blue-700 text-white border-b-8 border-blue-900 font-black text-2xl sm:text-3xl px-10 py-4 rounded-3xl shadow-xl flex items-center gap-2">
+              <span>Next</span>
+              <span>➔</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- WOODEN PRODUCE STAND COUNTER BASE -->
+  <footer class="wood-plank-bottom h-6 sm:h-8 shrink-0 flex items-center justify-center px-4 text-amber-200/90 text-xs font-bold z-20">
+    <span>Stand Left or Right in front of the camera • Or press ⬅ / ➡ Arrow Keys</span>
+  </footer>
+
+  <!-- Hidden Offscreen Canvas for Webcam Motion & Position Detection -->
+  <canvas id="motion-canvas" width="160" height="90" class="hidden"></canvas>
+  <!-- Confetti Canvas -->
+  <canvas id="confetti-canvas" class="absolute inset-0 pointer-events-none z-50"></canvas>
+
+</div>
+
+<!-- SETTINGS MODAL: ADD CUSTOM PICTURES ("F and V game" Folder) -->
+<div id="settings-modal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+  <div class="bg-amber-50 border-8 border-amber-700 rounded-[36px] max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-pop">
+    <!-- Modal Header -->
+    <div class="bg-amber-600 px-6 py-4 flex items-center justify-between text-white">
+      <div class="flex items-center gap-3">
+        <span class="text-3xl">🖼️</span>
+        <div>
+          <h3 class="text-2xl font-black">Add Produce Pictures</h3>
+          <p class="text-amber-100 text-xs sm:text-sm font-bold">Upload images from your "F and V game" folder or device</p>
+        </div>
+      </div>
+      <button onclick="closeSettings()" class="btn-preschool bg-amber-800 hover:bg-amber-900 text-white w-10 h-10 rounded-full font-black text-xl flex items-center justify-center">
+        ✕
+      </button>
+    </div>
+
+    <!-- Modal Body -->
+    <div class="p-6 overflow-y-auto space-y-6 flex-1">
+      
+      <!-- Upload Form Box -->
+      <div class="bg-white border-4 border-dashed border-amber-400 rounded-3xl p-5">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+          <div>
+            <label class="block text-sm font-extrabold text-amber-950 mb-1">1. Choose Category</label>
+            <select id="upload-category" class="w-full border-2 border-amber-300 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 bg-amber-50/50 focus:outline-none focus:border-amber-600">
+              <option value="fruit">🍎 Fruit</option>
+              <option value="vegetable">🥦 Vegetable</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-extrabold text-amber-950 mb-1">2. Picture Label (Optional)</label>
+            <input id="upload-label" type="text" placeholder="e.g., Mango or Broccoli (uses filename if empty)" class="w-full border-2 border-amber-300 rounded-xl px-3.5 py-2.5 font-bold text-slate-800 focus:outline-none focus:border-amber-600" />
+          </div>
+        </div>
+
+        <label for="file-input" class="btn-preschool flex flex-col items-center justify-center bg-gradient-to-b from-amber-100 to-amber-200 hover:from-amber-200 hover:to-amber-300 border-2 border-amber-500 rounded-2xl p-5 cursor-pointer text-center">
+          <span class="text-4xl mb-1">📂</span>
+          <span class="font-black text-amber-950 text-lg">Click to Select Image Files (or Multiple!)</span>
+          <span class="text-xs font-bold text-amber-800 mt-0.5">Supports PNG, JPG, WEBP, SVG from your Downloads / "F and V game" folder</span>
+          <input id="file-input" type="file" accept="image/*" multiple class="hidden" onchange="handleImageUpload(event)" />
+        </label>
+      </div>
+
+      <!-- Current Deck Preview -->
+      <div>
+        <div class="flex items-center justify-between mb-3">
+          <h4 class="font-black text-amber-950 text-lg">Current Game Pictures (<span id="total-items-count">12</span>)</h4>
+          <button onclick="resetDefaultItems()" class="text-xs font-extrabold text-red-600 hover:underline">
+            Reset to Default Set
+          </button>
+        </div>
+        <div id="custom-items-grid" class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal Footer -->
+    <div class="bg-amber-100 px-6 py-3.5 border-t-2 border-amber-300 flex justify-end">
+      <button onclick="closeSettings()" class="btn-preschool bg-green-600 hover:bg-green-700 text-white font-black text-lg px-8 py-2.5 rounded-2xl shadow">
+        Done & Play!
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification Banner (No alert() used!) -->
+<div id="toast-msg" class="hidden fixed bottom-12 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white font-extrabold px-6 py-3 rounded-2xl shadow-2xl border-2 border-amber-400 text-base">
+  Saved!
+</div>
+
+<script>
+  // =========================================================================
+  // 1. BUILT-IN PRODUCE DATA & LOCALSTORAGE PERSISTENCE
+  // =========================================================================
+  const DEFAULT_PRODUCE = [
+    // Fruits
+    { id: 'f1', name: 'Apple', category: 'fruit', emoji: '🍎', bg: '#fee2e2' },
+    { id: 'f2', name: 'Banana', category: 'fruit', emoji: '🍌', bg: '#fef9c3' },
+    { id: 'f3', name: 'Strawberry', category: 'fruit', emoji: '🍓', bg: '#ffe4e6' },
+    { id: 'f4', name: 'Orange', category: 'fruit', emoji: '🍊', bg: '#ffedd5' },
+    { id: 'f5', name: 'Grapes', category: 'fruit', emoji: '🍇', bg: '#f3e8ff' },
+    { id: 'f6', name: 'Watermelon', category: 'fruit', emoji: '🍉', bg: '#dcfce7' },
+    // Vegetables
+    { id: 'v1', name: 'Carrot', category: 'vegetable', emoji: '🥕', bg: '#ffedd5' },
+    { id: 'v2', name: 'Broccoli', category: 'vegetable', emoji: '🥦', bg: '#dcfce7' },
+    { id: 'v3', name: 'Corn', category: 'vegetable', emoji: '🌽', bg: '#fef9c3' },
+    { id: 'v4', name: 'Eggplant', category: 'vegetable', emoji: '🍆', bg: '#f3e8ff' },
+    { id: 'v5', name: 'Bell Pepper', category: 'vegetable', emoji: '🫑', bg: '#dcfce7' },
+    { id: 'v6', name: 'Cucumber', category: 'vegetable', emoji: '🥒', bg: '#d1fae5' }
+  ];
+
+  const STORAGE_KEY = 'sunny_stand_produce_v1';
+  let produceItems = [];
+
+  function loadProduceItems() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          produceItems = parsed;
+          updateCategoryCounts();
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not read localStorage:', e);
+    }
+    produceItems = [...DEFAULT_PRODUCE];
+    updateCategoryCounts();
+  }
+
+  function saveProduceItems() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(produceItems));
+    } catch (e) {
+      showToast('Storage full! Try smaller image files.');
+    }
+    updateCategoryCounts();
+  }
+
+  function updateCategoryCounts() {
+    const fruits = produceItems.filter(i => i.category === 'fruit').length;
+    const vegs = produceItems.filter(i => i.category === 'vegetable').length;
+    document.getElementById('fruit-count-label').textContent = fruits;
+    document.getElementById('veg-count-label').textContent = vegs;
+    document.getElementById('total-items-count').textContent = produceItems.length;
+  }
+
+  // =========================================================================
+  // 2. WEB AUDIO API SOUND SYNTHESIZER (Offline, Zero External Audio Files)
+  // =========================================================================
+  let audioCtx = null;
+  let soundEnabled = true;
+
+  function ensureAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      audioCtx = new AudioContext();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  function toggleSound() {
+    soundEnabled = !soundEnabled;
+    document.getElementById('sound-icon').textContent = soundEnabled ? '🔊' : '🔇';
+    if (soundEnabled) {
+      ensureAudio();
+      playPopSound();
+    }
+  }
+
+  function playPopSound() {
+    if (!soundEnabled) return;
+    ensureAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(780, audioCtx.currentTime + 0.09);
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.1);
+  }
+
+  function playTickSound(secondsLeft) {
+    if (!soundEnabled) return;
+    ensureAudio();
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'triangle';
+    // Higher pitch on last 2 seconds
+    const freq = secondsLeft <= 2 ? 880 : 620;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    gain.gain.setValueAtTime(0.18, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.12);
+  }
+
+  function playCorrectSound() {
+    if (!soundEnabled) return;
+    ensureAudio();
+    // Cheerful ascending major arpeggio fanfare (C5 - E5 - G5 - C6)
+    const notes = [523.25, 659.25, 783.99, 1046.50];
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'triangle';
+      const startTime = audioCtx.currentTime + idx * 0.11;
+      osc.frequency.setValueAtTime(freq, startTime);
+      gain.gain.setValueAtTime(0.28, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.36);
+    });
+  }
+
+  function playIncorrectSound() {
+    if (!soundEnabled) return;
+    ensureAudio();
+    // Gentle descending two-tone "boing / try again"
+    const notes = [330, 246.94];
+    notes.forEach((freq, idx) => {
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      const startTime = audioCtx.currentTime + idx * 0.18;
+      osc.frequency.setValueAtTime(freq, startTime);
+      osc.frequency.linearRampToValueAtTime(freq * 0.92, startTime + 0.25);
+      gain.gain.setValueAtTime(0.25, startTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.28);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + 0.3);
+    });
+  }
+
+  // =========================================================================
+  // 3. WEBCAM & MOTION / SIDE DETECTION ENGINE
+  // =========================================================================
+  let cameraActive = false;
+  let videoStream = null;
+  let prevFrameData = null;
+  let detectedSide = 'center'; // 'left' | 'right' | 'center'
+  let smoothedBalance = 0; // -1 (full left) to +1 (full right)
+  let motionLoopId = null;
+
+  const videoEl = document.getElementById('webcam-video');
+  const motionCanvas = document.getElementById('motion-canvas');
+  const motionCtx = motionCanvas.getContext('2d', { willReadFrequently: true });
+
+  async function initCamera() {
+    try {
+      videoStream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 640 }, height: { ideal: 360 }, facingMode: 'user' },
+        audio: false
+      });
+      videoEl.srcObject = videoStream;
+      await videoEl.play();
+      cameraActive = true;
+      document.getElementById('no-camera-bg').classList.add('hidden');
+      videoEl.classList.remove('hidden');
+      updateCameraButtonUI(true);
+      startMotionTracking();
+    } catch (err) {
+      console.warn('Camera unavailable or permission denied:', err);
+      cameraActive = false;
+      videoEl.classList.add('hidden');
+      document.getElementById('no-camera-bg').classList.remove('hidden');
+      updateCameraButtonUI(false);
+    }
+  }
+
+  function stopCamera() {
+    if (videoStream) {
+      videoStream.getTracks().forEach(t => t.stop());
+      videoStream = null;
+    }
+    cameraActive = false;
+    if (motionLoopId) cancelAnimationFrame(motionLoopId);
+    videoEl.classList.add('hidden');
+    document.getElementById('no-camera-bg').classList.remove('hidden');
+    updateCameraButtonUI(false);
+  }
+
+  function toggleCamera() {
+    if (cameraActive) {
+      stopCamera();
+      showToast('Camera paused — click cards or use Left/Right keys');
+    } else {
+      initCamera();
+    }
+  }
+
+  function updateCameraButtonUI(isOn) {
+    const icon = document.getElementById('cam-status-icon');
+    const text = document.getElementById('cam-status-text');
+    const btn = document.getElementById('btn-cam-toggle');
+    if (isOn) {
+      icon.textContent = '📷';
+      text.textContent = 'Camera On';
+      btn.classList.remove('bg-slate-200', 'text-slate-600', 'border-slate-400');
+      btn.classList.add('bg-sky-100', 'text-sky-900', 'border-sky-700');
+    } else {
+      icon.textContent = '🚫';
+      text.textContent = 'Camera Off';
+      btn.classList.add('bg-slate-200', 'text-slate-600', 'border-slate-400');
+      btn.classList.remove('bg-sky-100', 'text-sky-900', 'border-sky-700');
+    }
+  }
+
+  function startMotionTracking() {
+    const w = motionCanvas.width;
+    const h = motionCanvas.height;
+
+    function processFrame() {
+      if (!cameraActive) return;
+
+      if (videoEl.readyState >= 2) {
+        // Draw mirrored image to match user screen perspective
+        motionCtx.save();
+        motionCtx.scale(-1, 1);
+        motionCtx.drawImage(videoEl, -w, 0, w, h);
+        motionCtx.restore();
+
+        const currentFrame = motionCtx.getImageData(0, 0, w, h).data;
+
+        if (prevFrameData) {
+          let leftMotion = 0;
+          let rightMotion = 0;
+          const midX = w / 2;
+
+          for (let y = 0; y < h; y += 2) {
+            for (let x = 0; x < w; x += 2) {
+              const i = (y * w + x) * 4;
+              const diff =
+                Math.abs(currentFrame[i] - prevFrameData[i]) +
+                Math.abs(currentFrame[i + 1] - prevFrameData[i + 1]) +
+                Math.abs(currentFrame[i + 2] - prevFrameData[i + 2]);
+
+              if (diff > 55) {
+                if (x < midX) leftMotion += diff;
+                else rightMotion += diff;
+              }
+            }
+          }
+
+          const totalMotion = leftMotion + rightMotion;
+          if (totalMotion > 1800) {
+            // Compute normalized horizontal motion bias (-1 = Left, +1 = Right)
+            const rawBalance = (rightMotion - leftMotion) / totalMotion;
+            smoothedBalance = smoothedBalance * 0.72 + rawBalance * 0.28;
+
+            if (smoothedBalance < -0.14) {
+              setDetectedSide('left');
+            } else if (smoothedBalance > 0.14) {
+              setDetectedSide('right');
+            }
+          }
+        }
+
+        prevFrameData = new Uint8ClampedArray(currentFrame);
+      }
+
+      motionLoopId = requestAnimationFrame(processFrame);
+    }
+
+    motionLoopId = requestAnimationFrame(processFrame);
+  }
+
+  function setDetectedSide(side) {
+    if (roundState !== 'playing') return;
+    detectedSide = side;
+
+    const leftZone = document.getElementById('zone-left-highlight');
+    const rightZone = document.getElementById('zone-right-highlight');
+    const cardLeft = document.getElementById('card-left');
+    const cardRight = document.getElementById('card-right');
+    const badge = document.getElementById('detected-side-text');
+
+    leftZone.classList.remove('bg-sky-400/30');
+    rightZone.classList.remove('bg-purple-400/30');
+    cardLeft.classList.remove('active-side');
+    cardRight.classList.remove('active-side');
+
+    if (side === 'left') {
+      leftZone.classList.add('bg-sky-400/30');
+      cardLeft.classList.add('active-side');
+      badge.textContent = '◀ LEFT SIDE';
+      badge.className = 'px-3 py-0.5 rounded-full bg-sky-400 text-slate-950 uppercase';
+    } else if (side === 'right') {
+      rightZone.classList.add('bg-purple-400/30');
+      cardRight.classList.add('active-side');
+      badge.textContent = 'RIGHT SIDE ▶';
+      badge.className = 'px-3 py-0.5 rounded-full bg-purple-400 text-white uppercase';
+    } else {
+      badge.textContent = 'Center (Step Left or Right!)';
+      badge.className = 'px-3 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase';
+    }
+  }
+
+  // Fallback click or keyboard control
+  function manualSelectSide(side) {
+    if (roundState !== 'playing') return;
+    playPopSound();
+    setDetectedSide(side);
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (roundState !== 'playing') return;
+    if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+      manualSelectSide('left');
+    } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+      manualSelectSide('right');
+    }
+  });
+
+  // =========================================================================
+  // 4. GAME STATE, ROUND LOGIC & 5-SECOND TIMER
+  // =========================================================================
+  let currentMode = 'fruit'; // 'fruit' | 'vegetable'
+  let roundState = 'idle'; // 'idle' | 'ready' | 'playing' | 'result'
+  let correctSide = 'left'; // 'left' | 'right'
+  let currentTargetItem = null;
+  let currentDistractorItem = null;
+  let score = 0;
+  let roundsPlayed = 0;
+  let targetDeckIndex = 0;
+
+  let timerInterval = null;
+  const ROUND_DURATION_MS = 5000;
+  let roundStartTime = 0;
+  let lastWholeSecond = 5;
+
+  function showScreen(screenId) {
+    ['screen-select', 'screen-ready', 'screen-play'].forEach(id => {
+      document.getElementById(id).classList.add('hidden');
+    });
+    document.getElementById(screenId).classList.remove('hidden');
+  }
+
+  function updateModeSwitcherUI() {
+    const btnFruit = document.getElementById('btn-switch-fruit');
+    const btnVeg = document.getElementById('btn-switch-veg');
+
+    if (currentMode === 'fruit') {
+      btnFruit.className = 'btn-preschool px-4 py-1.5 rounded-xl font-extrabold text-base flex items-center gap-1.5 transition-colors bg-orange-500 text-white shadow';
+      btnVeg.className = 'btn-preschool px-4 py-1.5 rounded-xl font-extrabold text-base flex items-center gap-1.5 transition-colors text-amber-100 hover:bg-white/10';
+    } else {
+      btnVeg.className = 'btn-preschool px-4 py-1.5 rounded-xl font-extrabold text-base flex items-center gap-1.5 transition-colors bg-green-600 text-white shadow';
+      btnFruit.className = 'btn-preschool px-4 py-1.5 rounded-xl font-extrabold text-base flex items-center gap-1.5 transition-colors text-amber-100 hover:bg-white/10';
+    }
+  }
+
+  function goHome() {
+    clearInterval(timerInterval);
+    roundState = 'idle';
+    document.getElementById('score-badge').classList.add('hidden');
+    showScreen('screen-select');
+  }
+
+  function selectCategory(mode) {
+    playPopSound();
+    currentMode = mode;
+    targetDeckIndex = 0;
+    updateModeSwitcherUI();
+
+    const readyBadge = document.getElementById('ready-badge');
+    const readyEmoji = document.getElementById('ready-emoji');
+    const readyInstruction = document.getElementById('ready-instruction');
+
+    if (mode === 'fruit') {
+      readyBadge.textContent = '🍎 Fruits Mode';
+      readyBadge.className = 'px-5 py-1.5 rounded-full text-white font-black text-lg uppercase tracking-wider mb-4 bg-orange-500';
+      readyEmoji.textContent = '🍓';
+      readyInstruction.textContent = 'Choose the fruit.';
+    } else {
+      readyBadge.textContent = '🥦 Vegetables Mode';
+      readyBadge.className = 'px-5 py-1.5 rounded-full text-white font-black text-lg uppercase tracking-wider mb-4 bg-green-600';
+      readyEmoji.textContent = '🥕';
+      readyInstruction.textContent = 'Choose the vegetable.';
+    }
+
+    roundState = 'ready';
+    showScreen('screen-ready');
+  }
+
+  function switchMode(newMode) {
+    playPopSound();
+    clearInterval(timerInterval);
+    selectCategory(newMode);
+  }
+
+  function renderProduceMedia(container, item) {
+    if (item.imageDataUrl) {
+      container.innerHTML = `<img src="${item.imageDataUrl}" alt="${item.name}" class="w-full h-full object-contain rounded-xl drop-shadow" />`;
+    } else {
+      container.style.backgroundColor = item.bg || '#fef3c7';
+      container.innerHTML = `<span class="text-8xl sm:text-9xl select-none drop-shadow-sm">${item.emoji || '🧺'}</span>`;
+    }
+  }
+
+  function startRound() {
+    playPopSound();
+    ensureAudio();
+
+    const fruits = produceItems.filter(i => i.category === 'fruit');
+    const veggies = produceItems.filter(i => i.category === 'vegetable');
+
+    if (fruits.length === 0 || veggies.length === 0) {
+      showToast('Please ensure at least 1 Fruit and 1 Vegetable picture exist!');
+      openSettings();
+      return;
+    }
+
+    // Start webcam if not already running
+    if (!cameraActive && !videoStream) {
+      initCamera();
+    }
+
+    // Select target item sequentially so "Next" cycles cleanly through all pictures
+    const targetPool = currentMode === 'fruit' ? fruits : veggies;
+    const distractorPool = currentMode === 'fruit' ? veggies : fruits;
+
+    currentTargetItem = targetPool[targetDeckIndex % targetPool.length];
+    targetDeckIndex++;
+
+    currentDistractorItem = distractorPool[Math.floor(Math.random() * distractorPool.length)];
+
+    // Randomly place target on Left or Right
+    correctSide = Math.random() < 0.5 ? 'left' : 'right';
+    const leftItem = correctSide === 'left' ? currentTargetItem : currentDistractorItem;
+    const rightItem = correctSide === 'right' ? currentTargetItem : currentDistractorItem;
+
+    // Reset Card Styles
+    const cardLeft = document.getElementById('card-left');
+    const cardRight = document.getElementById('card-right');
+    cardLeft.className = 'produce-card w-full max-w-[330px] aspect-[4/4.2] p-4 sm:p-5 flex flex-col items-center justify-between cursor-pointer relative';
+    cardRight.className = 'produce-card w-full max-w-[330px] aspect-[4/4.2] p-4 sm:p-5 flex flex-col items-center justify-between cursor-pointer relative';
+
+    renderProduceMedia(document.getElementById('card-left-media'), leftItem);
+    document.getElementById('card-left-label').textContent = leftItem.name;
+
+    renderProduceMedia(document.getElementById('card-right-media'), rightItem);
+    document.getElementById('card-right-label').textContent = rightItem.name;
+
+    // Update HUD Instruction
+    document.getElementById('hud-mode-icon').textContent = currentMode === 'fruit' ? '🍎' : '🥦';
+    document.getElementById('hud-instruction').textContent =
+      currentMode === 'fruit' ? 'Choose the fruit.' : 'Choose the vegetable.';
+
+    // Hide Result Overlay & Show Score
+    document.getElementById('result-overlay').classList.add('hidden');
+    document.getElementById('score-badge').classList.remove('hidden');
+
+    // Reset Side Detection
+    roundState = 'playing';
+    detectedSide = 'center';
+    smoothedBalance = 0;
+    setDetectedSide('center');
+
+    showScreen('screen-play');
+    startFiveSecondCountdown();
+  }
+
+  function startFiveSecondCountdown() {
+    clearInterval(timerInterval);
+    roundStartTime = performance.now();
+    lastWholeSecond = 5;
+
+    const timerCircle = document.getElementById('timer-circle');
+    const timerBar = document.getElementById('timer-bar');
+
+    timerCircle.textContent = '5';
+    timerCircle.classList.remove('bg-red-600', 'timer-urgent');
+    timerCircle.classList.add('bg-amber-500');
+    timerBar.style.width = '100%';
+
+    timerInterval = setInterval(() => {
+      const elapsed = performance.now() - roundStartTime;
+      const remainingMs = Math.max(0, ROUND_DURATION_MS - elapsed);
+      const pct = (remainingMs / ROUND_DURATION_MS) * 100;
+      const wholeSec = Math.ceil(remainingMs / 1000);
+
+      timerBar.style.width = `${pct}%`;
+
+      if (wholeSec !== lastWholeSecond && wholeSec > 0) {
+        lastWholeSecond = wholeSec;
+        timerCircle.textContent = wholeSec;
+        playTickSound(wholeSec);
+
+        if (wholeSec <= 2) {
+          timerCircle.classList.remove('bg-amber-500');
+          timerCircle.classList.add('bg-red-600', 'timer-urgent');
+        }
+      }
+
+      if (remainingMs <= 0) {
+        clearInterval(timerInterval);
+        timerCircle.textContent = '0';
+        evaluateRound();
+      }
+    }, 50);
+  }
+
+  function evaluateRound() {
+    roundState = 'result';
+    roundsPlayed++;
+
+    const isCorrect = detectedSide === correctSide;
+    if (isCorrect) score++;
+
+    document.getElementById('score-count').textContent = score;
+    document.getElementById('round-total').textContent = roundsPlayed;
+
+    // Highlight Correct vs Wrong Cards
+    const cardLeft = document.getElementById('card-left');
+    const cardRight = document.getElementById('card-right');
+
+    if (correctSide === 'left') {
+      cardLeft.classList.add('correct-card');
+      cardRight.classList.add('wrong-card');
+    } else {
+      cardRight.classList.add('correct-card');
+      cardLeft.classList.add('wrong-card');
+    }
+
+    // Configure Result Modal
+    const resultBox = document.getElementById('result-box');
+    const resultEmoji = document.getElementById('result-emoji');
+    const resultTitle = document.getElementById('result-title');
+    const resultSubtitle = document.getElementById('result-subtitle');
+    const nextModeName = document.getElementById('btn-next-mode-name');
+
+    nextModeName.textContent = currentMode === 'fruit' ? 'Vegetables' : 'Fruits';
+
+    const categoryWord = currentMode === 'fruit' ? 'fruit' : 'vegetable';
+
+    if (isCorrect) {
+      playCorrectSound();
+      launchConfetti();
+      resultBox.className = 'bg-white border-8 border-green-500 rounded-[40px] px-8 py-6 sm:px-12 sm:py-8 max-w-xl w-full text-center shadow-2xl flex flex-col items-center';
+      resultEmoji.textContent = '🌟🎉';
+      resultTitle.textContent = 'Awesome Job!';
+      resultTitle.className = 'text-4xl sm:text-5xl font-black text-green-600 mb-2';
+      resultSubtitle.textContent = `Yes! ${currentTargetItem.name} is a ${categoryWord}!`;
+    } else {
+      playIncorrectSound();
+      resultBox.className = 'bg-white border-8 border-amber-500 rounded-[40px] px-8 py-6 sm:px-12 sm:py-8 max-w-xl w-full text-center shadow-2xl flex flex-col items-center';
+      resultEmoji.textContent = '💪😊';
+      resultTitle.textContent = detectedSide === 'center' ? "Time's Up!" : 'Nice Try!';
+      resultTitle.className = 'text-4xl sm:text-5xl font-black text-amber-600 mb-2';
+      resultSubtitle.textContent = `The ${currentTargetItem.name} (${correctSide.toUpperCase()} side) is the ${categoryWord}!`;
+    }
+
+    setTimeout(() => {
+      document.getElementById('result-overlay').classList.remove('hidden');
+    }, 450);
+  }
+
+  function nextRound() {
+    startRound();
+  }
+
+  // =========================================================================
+  // 5. CUSTOM PICTURE UPLOADER & SETTINGS MODAL ("F and V game")
+  // =========================================================================
+  function openSettings() {
+    playPopSound();
+    renderSettingsGrid();
+    document.getElementById('settings-modal').classList.remove('hidden');
+  }
+
+  function closeSettings() {
+    playPopSound();
+    document.getElementById('settings-modal').classList.add('hidden');
+  }
+
+  function handleImageUpload(event) {
+    const files = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    const category = document.getElementById('upload-category').value;
+    const customLabelInput = document.getElementById('upload-label').value.trim();
+
+    let processedCount = 0;
+
+    files.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        // Resize image gently on an offscreen canvas so localStorage stays fast & roomy
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 420;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxDim || h > maxDim) {
+            if (w > h) {
+              h = Math.round((h * maxDim) / w);
+              w = maxDim;
+            } else {
+              w = Math.round((w * maxDim) / h);
+              h = maxDim;
+            }
+          }
+          const c = document.createElement('canvas');
+          c.width = w;
+          c.height = h;
+          const ctx = c.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const compressedUrl = c.toDataURL('image/png', 0.88);
+
+          // Clean filename into readable label if user didn't type one
+          const cleanFileName = file.name
+            .replace(/\.[^/.]+$/, '')
+            .replace(/[-_]+/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase());
+
+          const finalLabel = (files.length === 1 && customLabelInput) ? customLabelInput : cleanFileName;
+
+          produceItems.unshift({
+            id: 'custom_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+            name: finalLabel || (category === 'fruit' ? 'Fruit' : 'Vegetable'),
+            category: category,
+            imageDataUrl: compressedUrl
+          });
+
+          processedCount++;
+          if (processedCount === files.length) {
+            saveProduceItems();
+            renderSettingsGrid();
+            document.getElementById('upload-label').value = '';
+            event.target.value = '';
+            showToast(`Added ${files.length} picture${files.length > 1 ? 's' : ''}!`);
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function deleteProduceItem(id) {
+    playPopSound();
+    produceItems = produceItems.filter(item => item.id !== id);
+    saveProduceItems();
+    renderSettingsGrid();
+  }
+
+  function resetDefaultItems() {
+    playPopSound();
+    produceItems = [...DEFAULT_PRODUCE];
+    saveProduceItems();
+    renderSettingsGrid();
+    showToast('Restored default fruits & vegetables!');
+  }
+
+  function renderSettingsGrid() {
+    const grid = document.getElementById('custom-items-grid');
+    grid.innerHTML = '';
+
+    produceItems.forEach(item => {
+      const card = document.createElement('div');
+      card.className = 'bg-white border-2 border-amber-300 rounded-2xl p-2.5 flex flex-col items-center relative shadow-sm';
+
+      const badgeColor = item.category === 'fruit' ? 'bg-orange-500' : 'bg-green-600';
+      const badgeLabel = item.category === 'fruit' ? 'Fruit' : 'Veg';
+
+      const mediaHtml = item.imageDataUrl
+        ? `<img src="${item.imageDataUrl}" alt="${item.name}" class="w-16 h-16 object-contain rounded-lg" />`
+        : `<span class="text-5xl leading-none py-1">${item.emoji}</span>`;
+
+      card.innerHTML = `
+        <span class="absolute top-1.5 left-1.5 ${badgeColor} text-white text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+          ${badgeLabel}
+        </span>
+        <button onclick="deleteProduceItem('${item.id}')" class="absolute top-1.5 right-1.5 bg-red-100 hover:bg-red-500 hover:text-white text-red-700 w-6 h-6 rounded-full text-xs font-black flex items-center justify-center transition-colors" title="Remove">
+          ✕
+        </button>
+        <div class="mt-4 mb-1.5 flex items-center justify-center h-16">
+          ${mediaHtml}
+        </div>
+        <div class="font-extrabold text-slate-800 text-sm text-center truncate w-full">${item.name}</div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // =========================================================================
+  // 6. FULLSCREEN, TOAST & CELEBRATION CONFETTI
+  // =========================================================================
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  let toastTimeout = null;
+  function showToast(msg) {
+    const el = document.getElementById('toast-msg');
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    clearTimeout(toastTimeout);
+    toastTimeout = setTimeout(() => el.classList.add('hidden'), 3000);
+  }
+
+  function launchConfetti() {
+    const canvas = document.getElementById('confetti-canvas');
+    const stage = document.getElementById('stage-wrapper');
+    canvas.width = stage.clientWidth;
+    canvas.height = stage.clientHeight;
+    const ctx = canvas.getContext('2d');
+
+    const colors = ['#ef4444', '#f59e0b', '#22c55e', '#3b82f6', '#a855f7', '#ec4899'];
+    const particles = Array.from({ length: 75 }, () => ({
+      x: canvas.width * 0.5 + (Math.random() - 0.5) * 260,
+      y: canvas.height * 0.45,
+      vx: (Math.random() - 0.5) * 14,
+      vy: -Math.random() * 12 - 4,
+      size: Math.random() * 10 + 6,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      rot: Math.random() * 360,
+      vRot: (Math.random() - 0.5) * 12
+    }));
+
+    let frames = 0;
+    function step() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.42; // gravity
+        p.rot += p.vRot;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate((p.rot * Math.PI) / 180);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size * 0.65);
+        ctx.restore();
+      });
+      frames++;
+      if (frames < 95) {
+        requestAnimationFrame(step);
+      } else {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  // Initialize on Page Load
+  window.onload = function () {
+    loadProduceItems();
+    updateModeSwitcherUI();
+  };
+</script>
+</body>
+</html>
